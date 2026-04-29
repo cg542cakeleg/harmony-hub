@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import useLocalStorage from './hooks/useLocalStorage';
 import { seedBills } from './data/seedData';
 import { DEFAULT_MEMBERS } from './data/defaultMembers';
@@ -22,6 +22,18 @@ export default function App() {
   const [listItems, setListItems] = useLocalStorage<ListItem[]>('harmony_lists', []);
   const [tab, setTab] = useState<Tab>('home');
   const [showProfileManager, setShowProfileManager] = useState(false);
+
+  // One-time migration: apply PINs to any default member that has an empty PIN
+  useEffect(() => {
+    const pinMap: Record<string, string> = {};
+    for (const def of DEFAULT_MEMBERS) {
+      if (def.pin) pinMap[def.id] = def.pin;
+    }
+    const needsUpdate = members.some(m => pinMap[m.id] && !m.pin);
+    if (needsUpdate) {
+      setMembers(members.map(m => (pinMap[m.id] && !m.pin ? { ...m, pin: pinMap[m.id] } : m)));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeUser = members.find(m => m.id === activeUserId) ?? null;
 
