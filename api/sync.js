@@ -1,6 +1,6 @@
-﻿import { kv } from '@vercel/kv';
+﻿import { put, list } from '@vercel/blob';
 
-const KV_KEY = 'harmony:data';
+const BLOB_NAME = 'harmony-data.json';
 
 // Merge two arrays by id — newer updated_date wins
 function mergeArrays(local = [], server = []) {
@@ -15,6 +15,19 @@ function mergeArrays(local = [], server = []) {
   return Array.from(map.values());
 }
 
+// Fetch current blob data (returns {} if none yet)
+async function getExisting() {
+  try {
+    const { blobs } = await list({ prefix: 'harmony-data' });
+    if (!blobs.length) return {};
+    const res = await fetch(blobs[0].url);
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -23,25 +36,30 @@ export default async function handler(req, res) {
 
   // GET — return current cloud state
   if (req.method === 'GET') {
-    const data = await kv.get(KV_KEY);
-    return res.status(200).json(data ?? {});
+    const data = await getExisting();
+    return res.status(200).json(data);
   }
 
   // POST — merge incoming data with cloud state and save
   if (req.method === 'POST') {
     const incoming = req.body ?? {};
-    const existing = (await kv.get(KV_KEY)) ?? {};
+    const existing = await getExisting();
 
     const merged = {
-      bills:    mergeArrays(incoming.bills,    existing.bills),
-      chores:   mergeArrays(incoming.chores,   existing.chores),
-      events:   mergeArrays(incoming.events,   existing.events),
-      lists:    mergeArrays(incoming.lists,    existing.lists),
-      members:  mergeArrays(incoming.members,  existing.members),
+      bills:    mergeArrays(incoming.bills,   existing.bills),
+      chores:   mergeArrays(incoming.chores,  existing.chores),
+      events:   mergeArrays(incoming.events,  existing.events),
+      lists:    mergeArrays(incoming.lists,   existing.lists),
+      members:  mergeArrays(incoming.members, existing.members),
       updatedAt: Date.now(),
     };
 
-    await kv.set(KV_KEY, merged);
+    await put(BLOB_NAME, JSON.stringify(merged), {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: 'application/json',
+    });
+
     return res.status(200).json(merged);
   }
 
