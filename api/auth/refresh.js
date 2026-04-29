@@ -1,10 +1,8 @@
-﻿import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// POST /api/auth/refresh
+﻿// POST /api/auth/refresh
 // Uses a stored refresh token to silently get a new access token.
-// Called automatically by the app whenever the 1-hour access token expires.
+// Called automatically whenever the 1-hour access token expires.
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -34,7 +32,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const data = await tokenRes.json();
 
   if (!tokenRes.ok) {
-    // Refresh token was revoked or expired — user must reconnect
     console.error('Google refresh error:', data);
     return res.status(401).json({ error: data.error_description ?? 'Refresh failed' });
   }

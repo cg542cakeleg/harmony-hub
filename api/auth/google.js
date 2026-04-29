@@ -1,11 +1,8 @@
-﻿import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// POST /api/auth/google
+﻿// POST /api/auth/google
 // Exchanges a Google authorization code for access + refresh tokens.
-// The client secret lives here (server-side only) — never in the browser bundle.
+// Client secret lives here (server-side only) — never in the browser bundle.
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS — allow requests from the same origin
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -29,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       code,
       client_id:     clientId,
       client_secret: clientSecret,
-      redirect_uri:  'postmessage',   // GIS popup flow uses this special value
+      redirect_uri:  'postmessage',
       grant_type:    'authorization_code',
     }),
   });
@@ -41,11 +38,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: data.error_description ?? 'Token exchange failed' });
   }
 
-  // Return access + refresh tokens to the client.
-  // Client stores refresh token in localStorage; access token is short-lived.
   return res.status(200).json({
     access_token:  data.access_token,
-    refresh_token: data.refresh_token,   // long-lived, never expires unless revoked
-    expires_in:    data.expires_in,      // seconds until access_token expires (typically 3600)
+    refresh_token: data.refresh_token,
+    expires_in:    data.expires_in,
   });
 }
