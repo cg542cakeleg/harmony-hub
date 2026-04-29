@@ -1,4 +1,4 @@
-﻿// POST /api/auth/refresh
+// POST /api/auth/refresh
 // Uses a stored refresh token to silently get a new access token.
 // Called automatically whenever the 1-hour access token expires.
 

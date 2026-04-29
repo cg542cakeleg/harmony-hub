@@ -1,4 +1,4 @@
-﻿// POST /api/auth/google
+// POST /api/auth/google
 // Exchanges a Google authorization code for access + refresh tokens.
 // Client secret lives here (server-side only) — never in the browser bundle.
 
