@@ -46,6 +46,7 @@ export interface FamilyEvent {
   assigned_to: string;
   notes: string;
   color: string;
+  source?: 'google';
   created_date: string;
   updated_date: string;
 }
