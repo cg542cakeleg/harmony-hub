@@ -54,6 +54,49 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* ── Dark glass card — used by all sub-views ─────────────────────────────── */
+
+.dk-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dk-card-hi {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dk-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dk-input {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.dk-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.dk-input:focus {
+  border-color: rgba(255, 16, 240, 0.5) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 16, 240, 0.15) !important;
+}
+
+.dk-select {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.dk-select option {
+  background: #1a0030;
+  color: white;
+}
+
 /* ── Chrome / neon gradient text ─────────────────────────────────────────── */
 
 .chrome-text {

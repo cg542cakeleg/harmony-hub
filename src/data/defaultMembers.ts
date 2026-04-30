@@ -1,11 +1,11 @@
-﻿import type { FamilyMember } from '../types';
+import type { FamilyMember } from '../types';
 
 export const DEFAULT_MEMBERS: FamilyMember[] = [
   {
     id: 'member-cleta',
     name: 'Cleta',
-    color: '#E07092',
-    bgColor: '#F9C6D0',
+    color: '#FF10F0',
+    bgColor: 'rgba(255,16,240,0.18)',
     emoji: '👩',
     pin: '3336',
     role: 'admin',
@@ -14,8 +14,8 @@ export const DEFAULT_MEMBERS: FamilyMember[] = [
   {
     id: 'member-eric',
     name: 'Eric',
-    color: '#3DAED4',
-    bgColor: '#B8EAD8',
+    color: '#00D4FF',
+    bgColor: 'rgba(0,212,255,0.18)',
     emoji: '👨',
     pin: '1992',
     role: 'member',
@@ -24,8 +24,8 @@ export const DEFAULT_MEMBERS: FamilyMember[] = [
   {
     id: 'member-momo',
     name: 'MoMo',
-    color: '#8B6FD4',
-    bgColor: '#D6CCF4',
+    color: '#B66DFF',
+    bgColor: 'rgba(182,109,255,0.18)',
     emoji: '👵',
     pin: '2538',
     role: 'member',

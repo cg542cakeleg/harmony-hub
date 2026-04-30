@@ -90,7 +90,7 @@ export default function Dashboard({ bills, chores, events, listItems, user, onNa
                 {lateBills.length} OVERDUE BILL{lateBills.length !== 1 ? 'S' : ''}
               </p>
               <p className="text-sm mt-0.5" style={{ color: 'rgba(255,100,140,0.9)' }}>
-                {lateBills.map(b => b.name).join(', ')}
+                {lateBills.slice(0, 3).map(b => b.name).join(', ')}{lateBills.length > 3 ? ` +${lateBills.length - 3} more` : ''}
               </p>
             </div>
             <button

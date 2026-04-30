@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isBefore } from 'date-fns';
 import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, RefreshCw, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import type { FamilyEvent, EventCategory, FamilyMember } from '../types';
@@ -6,16 +6,16 @@ import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 
 const CATEGORIES: EventCategory[] = ['appointment','birthday','school','family','holiday','other'];
 const CAT_STYLES: Record<EventCategory, { bg: string; color: string; emoji: string }> = {
-  appointment: { bg: '#E8F0FE', color: '#1565C0', emoji: '🏥' },
-  birthday:    { bg: '#FCE8E6', color: '#C62828', emoji: '🎂' },
-  school:      { bg: '#FEF3E2', color: '#E65100', emoji: '🎒' },
-  family:      { bg: '#E6F4EA', color: '#2E7D32', emoji: '👨‍👩‍👧' },
-  holiday:     { bg: '#F3E8FF', color: '#6B21A8', emoji: '🎉' },
-  other:       { bg: '#F3F4F6', color: '#4B5563', emoji: '📅' },
+  appointment: { bg: 'rgba(0,212,255,0.2)',  color: '#00D4FF', emoji: '🏥' },
+  birthday:    { bg: 'rgba(255,0,110,0.2)',   color: '#FF006E', emoji: '🎂' },
+  school:      { bg: 'rgba(255,184,0,0.2)',   color: '#FFB800', emoji: '🎒' },
+  family:      { bg: 'rgba(0,255,159,0.2)',   color: '#00FF9F', emoji: '👨‍👩‍👧' },
+  holiday:     { bg: 'rgba(182,109,255,0.2)', color: '#B66DFF', emoji: '🎉' },
+  other:       { bg: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', emoji: '📅' },
 };
 const CAT_DOT: Record<EventCategory, string> = {
-  appointment: '#4285F4', birthday: '#EA4335', school: '#FBBC04',
-  family: '#34A853', holiday: '#9C27B0', other: '#9E9E9E',
+  appointment: '#00D4FF', birthday: '#FF006E', school: '#FFB800',
+  family: '#00FF9F', holiday: '#B66DFF', other: 'rgba(255,255,255,0.4)',
 };
 
 function newId() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -42,10 +42,7 @@ export default function EventsView({ events, onChange, user, members }: Props) {
   const [draft,    setDraft]    = useState(emptyEvent());
 
   const { isConnected, isSyncing, error, googleEvents, lastSync, clientIdSet, connect, sync, disconnect } = useGoogleCalendar();
-
-  // Merge local + google events (de-duped by id)
   const allEvents = [...events, ...googleEvents.filter(ge => !events.some(le => le.id === ge.id))];
-
   const days = eachDayOfInterval({ start: startOfMonth(current), end: endOfMonth(current) });
   const startPad = getDay(startOfMonth(current));
   const eventsOnDay = (d: Date) => allEvents.filter(e => isSameDay(parseISO(e.date), d));
@@ -74,101 +71,98 @@ export default function EventsView({ events, onChange, user, members }: Props) {
     .slice(0, 10);
   const selectedEvents = selected ? eventsOnDay(parseISO(selected)) : [];
 
+  const inputCls = 'dk-input w-full mt-1 rounded-xl px-3 py-2 text-sm';
+  const labelCls = 'text-xs font-black tracking-widest uppercase';
+  const labelStyle = { color: 'rgba(255,255,255,0.45)' };
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-800">Family Calendar</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Family Calendar</h1>
             <span className="text-2xl">📅</span>
           </div>
-          <p className="text-gray-400 text-sm mt-0.5">Everyone's schedule, all in one place</p>
+          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>Everyone's schedule, all in one place</p>
         </div>
         <button
           onClick={() => { setAdding(true); setEditing(null); setDraft(emptyEvent(selected || '')); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
-          style={{ background: user.color }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white shadow-sm hover:scale-105 transition-all"
+          style={{ background: `linear-gradient(135deg, ${user.color} 0%, ${user.color}99 100%)`, boxShadow: `0 4px 16px ${user.color}50` }}
         >
           <Plus size={16} /> Add Event
         </button>
       </div>
 
-      {/* ── Google Calendar Sync Bar ── */}
+      {/* Google Calendar Sync Bar */}
       {clientIdSet && (
-        <div className={`rounded-2xl border px-4 py-3 flex flex-wrap items-center gap-3 ${isConnected ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'}`}>
-          {/* Status icon + text */}
+        <div className="rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3" style={{
+          background: isConnected ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.04)',
+          border: isConnected ? '1px solid rgba(0,212,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
+        }}>
           <div className="flex items-center gap-2 flex-1 min-w-0">
             {isConnected
-              ? <Wifi size={16} className="text-blue-500 flex-shrink-0" />
-              : <WifiOff size={16} className="text-gray-400 flex-shrink-0" />
+              ? <Wifi size={16} style={{ color: '#00D4FF', flexShrink: 0 }} />
+              : <WifiOff size={16} style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
             }
             <div className="min-w-0">
               {isConnected ? (
-                <p className="text-sm font-medium text-blue-700">
+                <p className="text-sm font-bold" style={{ color: '#00D4FF' }}>
                   Google Calendar connected
-                  {lastSync && <span className="font-normal text-blue-500 ml-1">· synced {formatLastSync(lastSync)}</span>}
-                  {isSyncing && <span className="font-normal text-blue-400 ml-1">· syncing…</span>}
+                  {lastSync && <span className="font-normal ml-1" style={{ color: 'rgba(0,212,255,0.7)' }}>· synced {formatLastSync(lastSync)}</span>}
+                  {isSyncing && <span className="font-normal ml-1" style={{ color: 'rgba(0,212,255,0.5)' }}>· syncing…</span>}
                 </p>
               ) : (
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.6)' }}>
                   Connect Google Calendar to see your events here
                 </p>
               )}
             </div>
           </div>
-
-          {/* Action buttons */}
           <div className="flex gap-2 flex-shrink-0">
             {isConnected ? (
               <>
-                <button
-                  onClick={sync}
-                  disabled={isSyncing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors disabled:opacity-50"
-                >
+                <button onClick={sync} disabled={isSyncing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all hover:scale-105 disabled:opacity-50"
+                  style={{ background: 'rgba(0,212,255,0.2)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.4)' }}>
                   <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
                   {isSyncing ? 'Syncing…' : 'Sync Now'}
                 </button>
-                <button
-                  onClick={disconnect}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-                >
+                <button onClick={disconnect}
+                  className="px-3 py-1.5 rounded-xl text-xs font-black transition-all hover:bg-white/10"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
                   Disconnect
                 </button>
               </>
             ) : (
-              <button
-                onClick={connect}
-                disabled={isSyncing}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-blue-500 hover:bg-blue-600 transition-colors disabled:opacity-50"
-              >
+              <button onClick={connect} disabled={isSyncing}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-black text-white transition-all hover:scale-105 disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#4285F4,#34A853)' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Sign in with Google
               </button>
             )}
           </div>
-
-          {/* Error */}
           {error && (
-            <div className="w-full flex items-center gap-2 text-red-600 text-xs mt-0.5">
+            <div className="w-full flex items-center gap-2 text-xs mt-0.5" style={{ color: '#FF006E' }}>
               <AlertCircle size={12} /> {error}
             </div>
           )}
         </div>
       )}
 
-      {/* ── Calendar Grid ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1))} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"><ChevronLeft size={18} /></button>
-          <h2 className="font-bold text-gray-800 text-lg">{format(current, 'MMMM yyyy')}</h2>
-          <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1))} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"><ChevronRight size={18} /></button>
+      {/* Calendar Grid */}
+      <div className="dk-card rounded-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 dk-row">
+          <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1))} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: 'rgba(255,255,255,0.6)' }}><ChevronLeft size={18} /></button>
+          <h2 className="font-black text-white text-lg">{format(current, 'MMMM yyyy')}</h2>
+          <button onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1))} className="p-2 rounded-xl hover:bg-white/10 transition-colors" style={{ color: 'rgba(255,255,255,0.6)' }}><ChevronRight size={18} /></button>
         </div>
-        <div className="grid grid-cols-7 border-b border-gray-50">
+        <div className="grid grid-cols-7 dk-row">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="text-center text-xs font-semibold text-gray-400 py-2">{d}</div>
+            <div key={d} className="text-center text-xs font-black tracking-widest py-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 p-2 gap-1">
@@ -180,25 +174,19 @@ export default function EventsView({ events, onChange, user, members }: Props) {
             const isT    = isToday(day);
             const hasGoogle = de.some(isGoogleEvent);
             return (
-              <div
-                key={day.toISOString()}
-                onClick={() => setSelected(isSel ? null : selKey)}
-                className={`h-14 flex flex-col items-center pt-1.5 cursor-pointer rounded-xl transition-all ${isSel ? 'ring-2' : 'hover:bg-gray-50'}`}
-                style={isSel ? { background: user.bgColor, outline: '2px solid ' + user.color } : {}}
+              <div key={day.toISOString()} onClick={() => setSelected(isSel ? null : selKey)}
+                className="h-14 flex flex-col items-center pt-1.5 cursor-pointer rounded-xl transition-all hover:bg-white/8"
+                style={isSel ? { background: `${user.color}25`, border: `2px solid ${user.color}` } : {}}
               >
-                <span
-                  className={`text-xs w-7 h-7 flex items-center justify-center rounded-full font-medium ${isT ? 'text-white' : 'text-gray-600'}`}
-                  style={isT ? { background: user.color } : {}}
-                >
+                <span className="text-xs w-7 h-7 flex items-center justify-center rounded-full font-bold transition-all"
+                  style={isT ? { background: user.color, color: 'white' } : { color: isSel ? user.color : 'rgba(255,255,255,0.8)' }}>
                   {format(day, 'd')}
                 </span>
                 <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-1">
                   {de.filter(e => !isGoogleEvent(e)).slice(0, 2).map(e => (
                     <span key={e.id} className="w-1.5 h-1.5 rounded-full" style={{ background: CAT_DOT[e.category] }} />
                   ))}
-                  {hasGoogle && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Google Calendar event" />
-                  )}
+                  {hasGoogle && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                 </div>
               </div>
             );
@@ -206,46 +194,44 @@ export default function EventsView({ events, onChange, user, members }: Props) {
         </div>
       </div>
 
-      {/* ── Selected Day Panel ── */}
+      {/* Selected Day Panel */}
       {selected && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="dk-card rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-800">{format(parseISO(selected), 'EEEE, MMMM d')}</h3>
-            <button
-              onClick={() => { setAdding(true); setEditing(null); setDraft(emptyEvent(selected)); }}
-              className="flex items-center gap-1 text-sm font-semibold px-3 py-1.5 rounded-xl text-white hover:opacity-90"
-              style={{ background: user.color }}
-            >
+            <h3 className="font-black text-white">{format(parseISO(selected), 'EEEE, MMMM d')}</h3>
+            <button onClick={() => { setAdding(true); setEditing(null); setDraft(emptyEvent(selected)); }}
+              className="flex items-center gap-1 text-sm font-black px-3 py-1.5 rounded-xl text-white hover:scale-105 transition-all"
+              style={{ background: user.color, boxShadow: `0 4px 12px ${user.color}50` }}>
               <Plus size={14} /> Add
             </button>
           </div>
           {selectedEvents.length === 0
-            ? <p className="text-sm text-gray-400 italic">No events — click Add to create one!</p>
+            ? <p className="text-sm italic" style={{ color: 'rgba(255,255,255,0.4)' }}>No events — click Add to create one!</p>
             : selectedEvents.map(ev => {
                 const s = CAT_STYLES[ev.category];
                 const assignedM = members.find(m => m.name === ev.assigned_to);
                 const fromGoogle = isGoogleEvent(ev);
                 return (
-                  <div key={ev.id} className="flex items-start gap-3 p-3 rounded-xl mb-2" style={{ background: fromGoogle ? '#EFF6FF' : s.bg }}>
+                  <div key={ev.id} className="flex items-start gap-3 p-3 rounded-xl mb-2" style={{ background: fromGoogle ? 'rgba(66,133,244,0.15)' : s.bg, border: `1px solid ${fromGoogle ? 'rgba(66,133,244,0.3)' : s.color + '44'}` }}>
                     <span className="text-xl mt-0.5">{fromGoogle ? '📆' : s.emoji}</span>
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-semibold text-sm" style={{ color: fromGoogle ? '#1D4ED8' : s.color }}>{ev.title}</p>
+                        <p className="font-black text-sm" style={{ color: fromGoogle ? '#4285F4' : s.color }}>{ev.title}</p>
                         {fromGoogle && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 font-semibold flex items-center gap-0.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-black flex items-center gap-0.5" style={{ background: 'rgba(66,133,244,0.3)', color: '#4285F4' }}>
                             <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                             Google
                           </span>
                         )}
                       </div>
-                      {ev.time && <p className="text-xs opacity-70 mt-0.5">{ev.time}{ev.end_time ? ` – ${ev.end_time}` : ''}</p>}
+                      {ev.time && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{ev.time}{ev.end_time ? ` – ${ev.end_time}` : ''}</p>}
                       {ev.assigned_to && <p className="text-xs mt-0.5" style={{ color: assignedM?.color || s.color }}>{assignedM?.emoji || '👤'} {ev.assigned_to}</p>}
-                      {ev.notes && <p className="text-xs opacity-60 mt-0.5">{ev.notes}</p>}
+                      {ev.notes && <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{ev.notes}</p>}
                     </div>
                     {!fromGoogle && (
                       <div className="flex gap-1">
-                        <button onClick={() => startEdit(ev)} className="p-1 opacity-60 hover:opacity-100 transition-opacity"><Pencil size={13} /></button>
-                        <button onClick={() => remove(ev.id)} className="p-1 opacity-60 hover:opacity-100 transition-opacity"><Trash2 size={13} /></button>
+                        <button onClick={() => startEdit(ev)} className="p-1 transition-opacity hover:opacity-100 opacity-60" style={{ color: '#B66DFF' }}><Pencil size={13} /></button>
+                        <button onClick={() => remove(ev.id)} className="p-1 transition-opacity hover:opacity-100 opacity-60" style={{ color: '#FF006E' }}><Trash2 size={13} /></button>
                       </div>
                     )}
                   </div>
@@ -255,57 +241,31 @@ export default function EventsView({ events, onChange, user, members }: Props) {
         </div>
       )}
 
-      {/* ── Add / Edit Form ── */}
+      {/* Add / Edit Form */}
       {(adding || editing) && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <h3 className="font-bold text-gray-800">{editing ? 'Edit Event' : 'New Event'}</h3>
+        <div className="dk-card rounded-2xl p-5 space-y-4">
+          <h3 className="font-black text-white tracking-tight">{editing ? 'Edit Event' : 'New Event'}</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="text-xs text-gray-400 font-medium">Title *</label>
-              <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200" placeholder="Event title" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 font-medium">Date</label>
-              <input type="date" value={draft.date} onChange={e => setDraft(d => ({ ...d, date: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 font-medium">Category</label>
-              <select value={draft.category} onChange={e => setDraft(d => ({ ...d, category: e.target.value as EventCategory }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-                {CATEGORIES.map(c => <option key={c} value={c}>{CAT_STYLES[c].emoji} {c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 font-medium">Start Time</label>
-              <input type="time" value={draft.time} onChange={e => setDraft(d => ({ ...d, time: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 font-medium">End Time</label>
-              <input type="time" value={draft.end_time} onChange={e => setDraft(d => ({ ...d, end_time: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs text-gray-400 font-medium">Assigned To</label>
-              <select value={draft.assigned_to} onChange={e => setDraft(d => ({ ...d, assigned_to: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none">
-                <option value="">Everyone</option>
-                {members.map(m => <option key={m.id} value={m.name}>{m.emoji} {m.name}</option>)}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs text-gray-400 font-medium">Notes</label>
-              <input value={draft.notes} onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200" placeholder="Any notes?" />
-            </div>
+            <div className="col-span-2"><label className={labelCls} style={labelStyle}>Title *</label><input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} className={inputCls} placeholder="Event title" /></div>
+            <div><label className={labelCls} style={labelStyle}>Date</label><input type="date" value={draft.date} onChange={e => setDraft(d => ({ ...d, date: e.target.value }))} className={inputCls} /></div>
+            <div><label className={labelCls} style={labelStyle}>Category</label><select value={draft.category} onChange={e => setDraft(d => ({ ...d, category: e.target.value as EventCategory }))} className="dk-select w-full mt-1 rounded-xl px-3 py-2 text-sm">{CATEGORIES.map(c => <option key={c} value={c}>{CAT_STYLES[c].emoji} {c}</option>)}</select></div>
+            <div><label className={labelCls} style={labelStyle}>Start Time</label><input type="time" value={draft.time} onChange={e => setDraft(d => ({ ...d, time: e.target.value }))} className={inputCls} /></div>
+            <div><label className={labelCls} style={labelStyle}>End Time</label><input type="time" value={draft.end_time} onChange={e => setDraft(d => ({ ...d, end_time: e.target.value }))} className={inputCls} /></div>
+            <div className="col-span-2"><label className={labelCls} style={labelStyle}>Assigned To</label><select value={draft.assigned_to} onChange={e => setDraft(d => ({ ...d, assigned_to: e.target.value }))} className="dk-select w-full mt-1 rounded-xl px-3 py-2 text-sm"><option value="">Everyone</option>{members.map(m => <option key={m.id} value={m.name}>{m.emoji} {m.name}</option>)}</select></div>
+            <div className="col-span-2"><label className={labelCls} style={labelStyle}>Notes</label><input value={draft.notes} onChange={e => setDraft(d => ({ ...d, notes: e.target.value }))} className={inputCls} placeholder="Any notes?" /></div>
           </div>
           <div className="flex gap-2 justify-end">
-            <button onClick={() => { setAdding(false); setEditing(null); }} className="px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100">Cancel</button>
-            <button onClick={save} disabled={!draft.title} className="px-5 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40" style={{ background: user.color }}>Save</button>
+            <button onClick={() => { setAdding(false); setEditing(null); }} className="px-4 py-2 rounded-xl text-sm font-black hover:bg-white/10 transition-all" style={{ color: 'rgba(255,255,255,0.6)' }}>Cancel</button>
+            <button onClick={save} disabled={!draft.title} className="px-5 py-2 rounded-xl text-sm font-black text-white hover:scale-105 disabled:opacity-40 transition-all" style={{ background: user.color, boxShadow: `0 4px 12px ${user.color}50` }}>Save</button>
           </div>
         </div>
       )}
 
-      {/* ── Upcoming Events ── */}
+      {/* Upcoming Events */}
       <div>
-        <h3 className="font-semibold text-gray-700 mb-3">Upcoming Events</h3>
+        <h3 className="font-black text-white mb-3 tracking-tight">Upcoming Events</h3>
         {upcoming.length === 0
-          ? <p className="text-sm text-gray-400 italic text-center py-6">No upcoming events. Add one!</p>
+          ? <p className="text-sm italic text-center py-6" style={{ color: 'rgba(255,255,255,0.4)' }}>No upcoming events. Add one!</p>
           : (
             <div className="space-y-2">
               {upcoming.map(ev => {
@@ -313,33 +273,31 @@ export default function EventsView({ events, onChange, user, members }: Props) {
                 const assignedM = members.find(m => m.name === ev.assigned_to);
                 const fromGoogle = isGoogleEvent(ev);
                 return (
-                  <div key={ev.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 px-4 py-3 group">
+                  <div key={ev.id} className="dk-card rounded-2xl flex items-center gap-4 px-4 py-3 group hover:bg-white/5 transition-all">
                     <div className="text-center min-w-10">
-                      <p className="text-xs font-bold uppercase text-gray-400">{format(parseISO(ev.date), 'MMM')}</p>
-                      <p className="text-xl font-bold text-gray-800 leading-none">{format(parseISO(ev.date), 'd')}</p>
+                      <p className="text-xs font-black uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>{format(parseISO(ev.date), 'MMM')}</p>
+                      <p className="text-xl font-black text-white leading-none">{format(parseISO(ev.date), 'd')}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: fromGoogle ? '#EFF6FF' : s.bg }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: fromGoogle ? 'rgba(66,133,244,0.2)' : s.bg }}>
                       {fromGoogle ? '📆' : s.emoji}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="font-medium text-sm text-gray-800 truncate">{ev.title}</p>
-                        {fromGoogle && (
-                          <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-600 font-bold flex-shrink-0">G</span>
-                        )}
+                        <p className="font-bold text-sm text-white truncate">{ev.title}</p>
+                        {fromGoogle && <span className="text-[9px] px-1 py-0.5 rounded font-black flex-shrink-0" style={{ background: 'rgba(66,133,244,0.3)', color: '#4285F4' }}>G</span>}
                       </div>
                       <div className="flex gap-2 mt-0.5">
-                        {ev.time && <span className="text-xs text-gray-400">{ev.time}</span>}
-                        {ev.assigned_to && <span className="text-xs" style={{ color: assignedM?.color || '#6B7280' }}>{assignedM?.emoji || '👤'} {ev.assigned_to}</span>}
+                        {ev.time && <span className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>{ev.time}</span>}
+                        {ev.assigned_to && <span className="text-xs font-bold" style={{ color: assignedM?.color || s.color }}>{assignedM?.emoji || '👤'} {ev.assigned_to}</span>}
                       </div>
                     </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0" style={{ background: fromGoogle ? '#EFF6FF' : s.bg, color: fromGoogle ? '#1D4ED8' : s.color }}>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-black flex-shrink-0" style={{ background: fromGoogle ? 'rgba(66,133,244,0.2)' : s.bg, color: fromGoogle ? '#4285F4' : s.color }}>
                       {fromGoogle ? 'Google' : ev.category}
                     </span>
                     {!fromGoogle && (
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => startEdit(ev)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"><Pencil size={13} /></button>
-                        <button onClick={() => remove(ev.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={13} /></button>
+                        <button onClick={() => startEdit(ev)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#B66DFF' }}><Pencil size={13} /></button>
+                        <button onClick={() => remove(ev.id)} className="p-1.5 rounded-lg transition-colors" style={{ color: '#FF006E' }}><Trash2 size={13} /></button>
                       </div>
                     )}
                   </div>
