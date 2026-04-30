@@ -294,20 +294,6 @@ export default function ProfileSelector({ members, onLogin, onUpdateMembers }: P
               </div>
 
               <div>
-                <label className="text-xs font-black tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>PIN (4 digits, optional)</label>
-                <input
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  value={draft.pin}
-                  onChange={e => setDraft(d => ({...d, pin: e.target.value.replace(/\D/g,'').slice(0,4)}))}
-                  placeholder="Leave blank for no PIN"
-                  className="w-full mt-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-white placeholder-white/30 outline-none"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '2px solid rgba(182,109,255,0.3)' }}
-                />
-              </div>
-
-              <div>
                 <label className="text-xs font-black tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.4)' }}>Role</label>
                 <div className="flex gap-2 mt-1.5">
                   {(['admin','member'] as const).map(r => (
