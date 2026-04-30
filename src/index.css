@@ -1,1 +1,73 @@
 @import "tailwindcss";
+
+/* ── Y2K Cyberpunk Theme ─────────────────────────────────────────────────── */
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+}
+
+body {
+  background: #0A0014;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* ── Keyframe animations ─────────────────────────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%       { transform: translateY(-20px) scale(1.05); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-10px); }
+  75%       { transform: translateX(10px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.65; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.85; transform: scale(1.04); }
+}
+
+.animate-float      { animation: float 8s ease-in-out infinite; }
+.animate-shake      { animation: shake 0.5s ease-in-out; }
+.animate-glow       { animation: glow-pulse 3s ease-in-out infinite; }
+.animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+
+/* ── Glassmorphism glossy effect ─────────────────────────────────────────── */
+
+.glossy {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Chrome / neon gradient text ─────────────────────────────────────────── */
+
+.chrome-text {
+  background: linear-gradient(135deg, #FF10F0 0%, #B66DFF 50%, #00D4FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,16,240,0.05); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(#FF10F0, #B66DFF);
+  border-radius: 3px;
+}
