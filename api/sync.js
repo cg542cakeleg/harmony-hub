@@ -21,7 +21,9 @@ async function getExisting() {
     const { blobs } = await list({ prefix: 'harmony-data' });
     if (!blobs.length) return {};
     // cache: no-store bypasses Vercel CDN so we always get the latest write
-    const res = await fetch(blobs[0].url, { cache: 'no-store' });
+    // Append timestamp to URL so CDN treats each request as unique (bypasses edge cache)
+    const bustUrl = blobs[0].url + '?_=' + Date.now();
+    const res = await fetch(bustUrl, { cache: 'no-store' });
     if (!res.ok) return {};
     return await res.json();
   } catch {
