@@ -20,7 +20,8 @@ async function getExisting() {
   try {
     const { blobs } = await list({ prefix: 'harmony-data' });
     if (!blobs.length) return {};
-    const res = await fetch(blobs[0].url);
+    // cache: no-store bypasses Vercel CDN so we always get the latest write
+    const res = await fetch(blobs[0].url, { cache: 'no-store' });
     if (!res.ok) return {};
     return await res.json();
   } catch {
@@ -32,6 +33,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Prevent the /api/sync route itself from being cached
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // GET — return current cloud state

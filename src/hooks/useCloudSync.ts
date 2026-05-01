@@ -1,4 +1,4 @@
-﻿import { useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Bill, Chore, FamilyEvent, ListItem, FamilyMember } from '../types';
 
 export interface AppData {
@@ -19,7 +19,7 @@ export function useCloudSync() {
   // Pull latest data from the cloud and return it (or null on failure)
   const pull = useCallback(async (): Promise<AppData | null> => {
     try {
-      const res = await fetch(SYNC_URL);
+      const res = await fetch(SYNC_URL, { cache: 'no-store' });
       if (!res.ok) return null;
       const data: AppData = await res.json();
       // Only return if it has actual content
