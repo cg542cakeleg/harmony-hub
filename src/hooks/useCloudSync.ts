@@ -10,7 +10,7 @@ export interface AppData {
 }
 
 const SYNC_URL    = '/api/sync';
-const DEBOUNCE_MS = 2000;   // wait 2s after last change before pushing
+const DEBOUNCE_MS = 500;   // wait 2s after last change before pushing
 
 export function useCloudSync() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useLocalStorage from './hooks/useLocalStorage';
 import { useCloudSync } from './hooks/useCloudSync';
 import { seedBills } from './data/seedData';
@@ -13,6 +13,20 @@ import ListsView from './components/ListsView';
 import type { Bill, Chore, FamilyEvent, ListItem, FamilyMember } from './types';
 
 type Tab = 'home' | 'bills' | 'chores' | 'events' | 'lists';
+
+// Client-side merge: item with newer updated_date wins (same logic as server mergeArrays).
+// Prevents a stale pull from overwriting locally-added items that haven't pushed yet.
+function mergeById<T extends { id: string; updated_date?: string }>(local: T[], cloud: T[]): T[] {
+  const map = new Map<string, T>();
+  for (const item of cloud) map.set(item.id, item);
+  for (const item of local) {
+    const c = map.get(item.id);
+    if (!c || (item.updated_date ?? '') >= (c.updated_date ?? '')) {
+      map.set(item.id, item);
+    }
+  }
+  return Array.from(map.values());
+}
 
 export default function App() {
   const [activeUserId,      setActiveUserId]      = useState<string | null>(null);
@@ -39,11 +53,12 @@ export default function App() {
   useEffect(() => {
     pull().then(data => {
       if (!data) { setSynced(true); return; }
-      if (data.bills?.length)   setBills(data.bills);
-      if (data.chores?.length)  setChores(data.chores);
-      if (data.events?.length)  setEvents(data.events);
-      if (data.lists?.length)   setListItems(data.lists);
-      if (data.members?.length) setMembers(data.members);
+      // Merge cloud into local so any locally-added items that haven't pushed yet are preserved
+      if (data.bills?.length)   setBills(prev   => mergeById(prev,  data.bills!));
+      if (data.chores?.length)  setChores(prev  => mergeById(prev,  data.chores!));
+      if (data.events?.length)  setEvents(prev  => mergeById(prev,  data.events!));
+      if (data.lists?.length)   setListItems(prev => mergeById(prev, data.lists!));
+      if (data.members?.length) setMembers(prev => mergeById(prev,  data.members!));
       setSynced(true);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -54,11 +69,11 @@ export default function App() {
       if (document.visibilityState === 'visible') {
         pull().then(data => {
           if (!data) return;
-          if (data.bills?.length)   setBills(data.bills);
-          if (data.chores?.length)  setChores(data.chores);
-          if (data.events?.length)  setEvents(data.events);
-          if (data.lists?.length)   setListItems(data.lists);
-          if (data.members?.length) setMembers(data.members);
+          if (data.bills?.length)   setBills(prev   => mergeById(prev,  data.bills!));
+          if (data.chores?.length)  setChores(prev  => mergeById(prev,  data.chores!));
+          if (data.events?.length)  setEvents(prev  => mergeById(prev,  data.events!));
+          if (data.lists?.length)   setListItems(prev => mergeById(prev, data.lists!));
+          if (data.members?.length) setMembers(prev => mergeById(prev,  data.members!));
         });
       }
     };
