@@ -1,4 +1,4 @@
-﻿export type BillStatus = 'not_paid' | 'paid' | 'partial' | 'waiting' | 'late';
+export type BillStatus = 'not_paid' | 'paid' | 'partial' | 'waiting' | 'late';
 export type BillCategory = 'rent' | 'utilities' | 'insurance' | 'phone' | 'subscriptions' | 'food' | 'medical' | 'loan' | 'kids' | 'other';
 
 export interface Bill {
@@ -77,4 +77,5 @@ export interface FamilyMember {
   pin: string;
   role: 'admin' | 'member';
   created_date: string;
+  updated_date?: string;
 }

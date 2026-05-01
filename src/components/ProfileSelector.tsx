@@ -60,12 +60,12 @@ export default function ProfileSelector({ members, onLogin, onUpdateMembers }: P
     const now = new Date().toISOString();
     if (editing) {
       onUpdateMembers(members.map(m => m.id === editing.id
-        ? { ...m, name: draft.name, emoji: draft.emoji, color: draft.color, bgColor: draft.bgColor, pin: draft.pin, role: draft.role }
+        ? { ...m, name: draft.name, emoji: draft.emoji, color: draft.color, bgColor: draft.bgColor, pin: draft.pin, role: draft.role, updated_date: new Date().toISOString() }
         : m
       ));
       setEditing(null);
     } else {
-      const nm: FamilyMember = { id: newId(), name: draft.name, emoji: draft.emoji, color: draft.color, bgColor: draft.bgColor, pin: draft.pin, role: draft.role, created_date: now };
+      const nm: FamilyMember = { id: newId(), name: draft.name, emoji: draft.emoji, color: draft.color, bgColor: draft.bgColor, pin: draft.pin, role: draft.role, created_date: now, updated_date: now };
       onUpdateMembers([...members, nm]);
       setAdding(false);
     }
