@@ -9,5 +9,6 @@ export const modules: ModuleMap = {
   "./components/mockups/harmony-wild/NeonBrutV1.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV1.tsx"),
   "./components/mockups/harmony-wild/NeonBrutV2.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV2.tsx"),
   "./components/mockups/harmony-wild/NeonBrutV3.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV3.tsx"),
-  "./components/mockups/harmony-wild/NeonBrutalism.tsx": () => import("../components/mockups/harmony-wild/NeonBrutalism.tsx")
+  "./components/mockups/harmony-wild/NeonBrutalism.tsx": () => import("../components/mockups/harmony-wild/NeonBrutalism.tsx"),
+  "./components/mockups/harmony-wild/RetroOS.tsx": () => import("../components/mockups/harmony-wild/RetroOS.tsx")
 };
