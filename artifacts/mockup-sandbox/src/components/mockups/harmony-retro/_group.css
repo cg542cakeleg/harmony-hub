@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Orbitron:wght@400..900&display=swap');
+
+.atomic-bloom {
+  --bg-cream: #FFF8F0;
+  --accent-orange: #C4501A;
+  --accent-mustard: #D4A017;
+  --accent-green: #6B7C2E;
+  --accent-brown: #7A4F2E;
+
+  background-color: var(--bg-cream);
+  color: var(--accent-brown);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+}
+
+.atomic-bloom-heading {
+  font-family: 'DM Serif Display', serif;
+}
+
+.atomic-bloom-card {
+  background-color: #FFFCF8;
+  border: 2px dashed var(--accent-brown);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0px var(--accent-mustard);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle paper texture */
+.atomic-bloom-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+.atomic-bloom-card-content {
+  position: relative;
+  z-index: 2;
+}
+
+.atomic-bloom-sidebar-item {
+  transition: all 0.2s;
+}
+
+.atomic-bloom-sidebar-item.active {
+  background-color: var(--accent-orange);
+  color: #fff;
+  border-radius: 9999px;
+  box-shadow: 2px 2px 0px var(--accent-brown);
+}
+
+.atomic-bloom-sidebar-item:hover:not(.active) {
+  background-color: rgba(212, 160, 23, 0.2);
+  border-radius: 9999px;
+}
+
+.atomic-starburst {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.atomic-bloom-button {
+  background-color: var(--accent-orange);
+  color: #fff;
+  border-radius: 9999px;
+  font-weight: bold;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 2px 2px 0px var(--accent-brown);
+}
+
+.atomic-bloom-button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--accent-brown);
+}
+
+.atomic-bloom-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--accent-brown);
+}
+
+.atomic-bloom-divider {
+  height: 4px;
+  background-image: radial-gradient(circle, var(--accent-orange) 2px, transparent 2.5px);
+  background-size: 10px 10px;
+  background-repeat: repeat-x;
+}
+
+.googie-amoeba {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
+.googie-amoeba-2 {
+  border-radius: 40% 60% 70% 30% / 50% 60% 30% 60%;
+}
+
+.googie-amoeba-3 {
+  border-radius: 50% 50% 30% 70% / 30% 50% 70% 50%;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(233, 30, 140, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(233, 30, 140, 0.8);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.atomic-orbit {
+  position: absolute;
+  border: 1px dashed rgba(79, 195, 247, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
