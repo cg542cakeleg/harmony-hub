@@ -2,25 +2,47 @@ import { useState, useEffect } from 'react';
 import { C, useHarmonyData } from '../hooks/use-harmony-data';
 import { Mono, Pixel, scanlinesBg, panelStyle, Button, ProgressBar, RetroCheck, insetStyle } from './RetroUI';
 import * as Dialog from '@radix-ui/react-dialog';
+import { useAuth } from '@workspace/replit-auth-web';
 
 import { ChoresTab } from './tabs/ChoresTab';
 import { ListsTab } from './tabs/ListsTab';
 import { BillsTab } from './tabs/BillsTab';
 import { CalendarTab } from './tabs/CalendarTab';
 
-const TitleBar = ({ title }: { title: string }) => (
-  <div style={{ background: C.gold, borderBottom: `4px solid ${C.navy}`, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-    <div style={{ display: 'flex', gap: 6 }}>
-      {[C.red, C.orange, C.green].map((col, i) => (
-        <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: col, border: `2px solid ${C.navy}` }} />
-      ))}
+const TitleBar = ({ title }: { title: string }) => {
+  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+
+  return (
+    <div style={{ background: C.gold, borderBottom: `4px solid ${C.navy}`, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[C.red, C.orange, C.green].map((col, i) => (
+          <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: col, border: `2px solid ${C.navy}` }} />
+        ))}
+      </div>
+      <Pixel size={20} color={C.navy} style={{ flex: 1, textAlign: 'center', letterSpacing: '0.1em' }}>
+        {title}
+      </Pixel>
+      <Mono style={{ fontSize: 11, color: C.navy, opacity: 0.6 }}>v2.0</Mono>
+      {!isLoading && (
+        isAuthenticated ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {user?.profileImageUrl && (
+              <img src={user.profileImageUrl} alt="" style={{ width: 22, height: 22, border: `2px solid ${C.navy}`, borderRadius: '50%' }} />
+            )}
+            <Mono style={{ fontSize: 11, color: C.navy }}>{user?.firstName ?? user?.email ?? 'USER'}</Mono>
+            <Button onClick={logout} bg={C.navy} style={{ padding: '2px 8px' }} testId="btn-logout">
+              <Pixel size={12} color={C.gold}>LOG OUT</Pixel>
+            </Button>
+          </div>
+        ) : (
+          <Button onClick={login} bg={C.navy} style={{ padding: '2px 10px' }} testId="btn-login">
+            <Pixel size={12} color={C.gold}>LOG IN</Pixel>
+          </Button>
+        )
+      )}
     </div>
-    <Pixel size={20} color={C.navy} style={{ flex: 1, textAlign: 'center', letterSpacing: '0.1em' }}>
-      {title}
-    </Pixel>
-    <Mono style={{ fontSize: 11, color: C.navy, opacity: 0.6 }}>v2.0</Mono>
-  </div>
-);
+  );
+};
 
 const TabBar = ({ tabs, active, setActive }: { tabs: { label: string; color: string }[]; active: string; setActive: (t: string) => void }) => (
   <div style={{ background: C.gold, borderBottom: `4px solid ${C.navy}`, display: 'flex', alignItems: 'flex-end', paddingLeft: 8, gap: 4 }}>
