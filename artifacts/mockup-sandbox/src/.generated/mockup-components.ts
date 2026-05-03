@@ -6,5 +6,8 @@ export const modules: ModuleMap = {
   "./components/mockups/harmony-retro/GroovyLounge.tsx": () => import("../components/mockups/harmony-retro/GroovyLounge.tsx"),
   "./components/mockups/harmony-wild/BentoGarden.tsx": () => import("../components/mockups/harmony-wild/BentoGarden.tsx"),
   "./components/mockups/harmony-wild/Cottagecore.tsx": () => import("../components/mockups/harmony-wild/Cottagecore.tsx"),
+  "./components/mockups/harmony-wild/NeonBrutV1.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV1.tsx"),
+  "./components/mockups/harmony-wild/NeonBrutV2.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV2.tsx"),
+  "./components/mockups/harmony-wild/NeonBrutV3.tsx": () => import("../components/mockups/harmony-wild/NeonBrutV3.tsx"),
   "./components/mockups/harmony-wild/NeonBrutalism.tsx": () => import("../components/mockups/harmony-wild/NeonBrutalism.tsx")
 };
