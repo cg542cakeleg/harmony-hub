@@ -158,10 +158,11 @@ export function BillsTab({ data, updateData }: { data: any; updateData: any }) {
     updateData((prev: any) => {
       const updated = prev.bills.flatMap((b: Bill) => {
         if (b.id !== id) return [b];
-        const nextStatus = b.status === 'PAID' ? 'DUE' : 'PAID';
-        const updatedBill = { ...b, status: nextStatus as Bill['status'] };
-        if (nextStatus === 'PAID' && b.frequency !== 'One-time') {
-          return [updatedBill, advanceRecurringBill(updatedBill)];
+        const nextStatus: Bill['status'] = b.status === 'PAID' ? 'DUE' : 'PAID';
+        const updatedBill: Bill = { ...b, status: nextStatus };
+        if (nextStatus === 'PAID') {
+          const next = advanceRecurringBill(updatedBill);
+          if (next) return [updatedBill, next];
         }
         return [updatedBill];
       });
@@ -183,12 +184,17 @@ export function BillsTab({ data, updateData }: { data: any; updateData: any }) {
   const totalOverdue = monthBills.filter(b => b.status === 'OVERDUE').reduce((s, b) => s + b.amount, 0);
 
   // Category grouping
-  const grouped: Record<BillCategory, Bill[]> = {} as any;
-  for (const cat of CATEGORIES) grouped[cat] = [];
+  const grouped: Record<BillCategory, Bill[]> = {
+    Housing: [],
+    Utilities: [],
+    Subscriptions: [],
+    Insurance: [],
+    Debt: [],
+    Other: [],
+  };
   for (const b of bills) {
-    const cat: BillCategory = b.category ?? 'Other';
-    if (grouped[cat]) grouped[cat].push(b);
-    else grouped['Other'].push(b);
+    const cat: BillCategory = CATEGORIES.includes(b.category) ? b.category : 'Other';
+    grouped[cat].push(b);
   }
 
   const overdueBills = bills.filter(b => b.status === 'OVERDUE');

@@ -126,8 +126,8 @@ function applyOverdueFlags(bills: Bill[]): Bill[] {
   });
 }
 
-export function advanceRecurringBill(bill: Bill): Bill {
-  if (!bill.dueDate) return bill;
+export function advanceRecurringBill(bill: Bill): Bill | null {
+  if (!bill.dueDate || bill.frequency === 'One-time') return null;
   const d = new Date(bill.dueDate + 'T00:00:00');
   switch (bill.frequency) {
     case 'Monthly':
@@ -139,8 +139,6 @@ export function advanceRecurringBill(bill: Bill): Bill {
     case 'Annual':
       d.setFullYear(d.getFullYear() + 1);
       break;
-    default:
-      return bill;
   }
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
