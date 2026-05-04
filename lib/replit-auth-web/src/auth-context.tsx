@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { AuthUser } from "@workspace/api-client-react";
+import { csrfFetch } from "./csrf";
 
 export type { AuthUser };
 
@@ -51,10 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
+    await csrfFetch("/api/auth/logout", { method: "POST" });
     setUser(null);
   }, []);
 

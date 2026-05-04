@@ -27,6 +27,9 @@ export const usersTable = pgTable("users", {
   // Account security
   loginAttempts: integer("login_attempts").notNull().default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  // Password reset
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

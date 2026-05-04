@@ -1,10 +1,11 @@
 import * as oidc from "openid-client";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
   GetCurrentAuthUserResponse,
 } from "@workspace/api-zod";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, sessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   clearSession,
@@ -13,7 +14,6 @@ import {
   createSession,
   deleteSession,
   SESSION_COOKIE,
-  SESSION_TTL,
   setSessionCookie,
   getSafeReturnTo,
   upsertGoogleUser,
@@ -25,10 +25,14 @@ import {
   recordFailedLogin,
   clearFailedLogins,
   isAccountLocked,
+  checkEmailRateLimit,
+  clearEmailRateLimit,
 } from "../lib/rateLimit";
+import { CSRF_COOKIE } from "../lib/csrf";
 
 const OIDC_COOKIE_TTL = 10 * 60 * 1000;
 const BCRYPT_ROUNDS = 12;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 const router: IRouter = Router();
 
@@ -48,7 +52,15 @@ function setOidcCookie(res: Response, name: string, value: string) {
   });
 }
 
-// ─── Current user ────────────────────────────────────────────────────────────
+// ─── CSRF token endpoint (allows frontend to bootstrap the token) ──────────────
+router.get("/auth/csrf", (_req: Request, res: Response) => {
+  // csrfMiddleware already issues/refreshes the cookie on every GET.
+  // This endpoint just returns the token value so JS can read it.
+  const token = _req.cookies?.[CSRF_COOKIE] ?? "";
+  res.json({ csrfToken: token });
+});
+
+// ─── Current user ─────────────────────────────────────────────────────────────
 router.get("/auth/user", (req: Request, res: Response) => {
   res.json(
     GetCurrentAuthUserResponse.parse({
@@ -73,6 +85,13 @@ router.post("/auth/register", authRateLimit, async (req: Request, res: Response)
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRe.test(emailLower)) {
     res.status(400).json({ error: "Invalid email address." });
+    return;
+  }
+
+  // Per-email rate limit
+  const emailCheck = checkEmailRateLimit(emailLower);
+  if (!emailCheck.allowed) {
+    res.status(429).json({ error: "Too many registration attempts for this email. Try again later." });
     return;
   }
 
@@ -122,7 +141,14 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
 
   const emailLower = (email as string).toLowerCase().trim();
 
-  // Check lockout
+  // Per-email rate limit (complements per-IP)
+  const emailCheck = checkEmailRateLimit(emailLower);
+  if (!emailCheck.allowed) {
+    res.status(429).json({ error: "Too many login attempts for this email. Try again later." });
+    return;
+  }
+
+  // Check DB-level lockout
   const lockStatus = await isAccountLocked(emailLower);
   if (lockStatus.locked) {
     const mins = lockStatus.until
@@ -153,6 +179,7 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
 
   // Success — clear failed attempts
   await clearFailedLogins(emailLower);
+  clearEmailRateLimit(emailLower);
 
   const sessionData: SessionData = {
     user: {
@@ -167,6 +194,131 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
   const sid = await createSession(sessionData);
   setSessionCookie(res, sid);
   res.json({ user: sessionData.user });
+});
+
+// ─── Password change ──────────────────────────────────────────────────────────
+router.post("/auth/change-password", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Must be logged in to change password." });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body ?? {};
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "currentPassword and newPassword are required." });
+    return;
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    res.status(400).json({ error: "New password must be at least 8 characters." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id));
+  if (!user?.passwordHash) {
+    res.status(400).json({ error: "This account uses Google sign-in. Password change is not available." });
+    return;
+  }
+
+  const valid = await bcrypt.compare(currentPassword as string, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Current password is incorrect." });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await db
+    .update(usersTable)
+    .set({ passwordHash: newHash, updatedAt: new Date() })
+    .where(eq(usersTable.id, user.id));
+
+  // Invalidate ALL sessions for this user except the current one
+  const currentSid = getSessionId(req);
+  const allSessions = await db.select().from(sessionsTable);
+  for (const s of allSessions) {
+    const sess = s.sess as { user?: { id?: string } };
+    if (sess?.user?.id === user.id && s.sid !== currentSid) {
+      await deleteSession(s.sid);
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// ─── Forgot password (request reset) ─────────────────────────────────────────
+router.post("/auth/forgot-password", authRateLimit, async (req: Request, res: Response) => {
+  const { email } = req.body ?? {};
+  if (!email) {
+    res.status(400).json({ error: "Email is required." });
+    return;
+  }
+
+  const emailLower = (email as string).toLowerCase().trim();
+
+  // Always respond 200 to avoid email enumeration
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, emailLower));
+  if (user && user.passwordHash) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    await db
+      .update(usersTable)
+      .set({ passwordResetToken: token, passwordResetExpiry: expiry, updatedAt: new Date() })
+      .where(eq(usersTable.id, user.id));
+
+    // TODO: Send email with reset link: /harmony-hub/?reset_token=<token>
+    // Until email sending is wired up, log the token in dev
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[DEV] Password reset token for ${emailLower}: ${token}`);
+    }
+  }
+
+  res.json({ message: "If that email is registered, a reset link has been sent." });
+});
+
+// ─── Forgot password (confirm reset) ─────────────────────────────────────────
+router.post("/auth/reset-password", authRateLimit, async (req: Request, res: Response) => {
+  const { token, newPassword } = req.body ?? {};
+  if (!token || !newPassword) {
+    res.status(400).json({ error: "token and newPassword are required." });
+    return;
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters." });
+    return;
+  }
+
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.passwordResetToken, token as string));
+
+  if (!user || !user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+    res.status(400).json({ error: "Invalid or expired reset token." });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await db
+    .update(usersTable)
+    .set({
+      passwordHash: newHash,
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+      loginAttempts: 0,
+      lockedUntil: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, user.id));
+
+  // Invalidate ALL sessions for this user after password reset
+  const allSessions = await db.select().from(sessionsTable);
+  for (const s of allSessions) {
+    const sess = s.sess as { user?: { id?: string } };
+    if (sess?.user?.id === user.id) {
+      await deleteSession(s.sid);
+    }
+  }
+
+  res.json({ success: true });
 });
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
