@@ -311,7 +311,7 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
 
     const redirectTo = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callbackUrl,
-      scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
+      scope: "openid email profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/photoslibrary.readonly",
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
       state,
