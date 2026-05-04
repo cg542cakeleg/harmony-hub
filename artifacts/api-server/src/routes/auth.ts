@@ -28,11 +28,57 @@ import {
 } from "../lib/rateLimit";
 import { CSRF_COOKIE } from "../lib/csrf";
 
-const OIDC_COOKIE_TTL = 10 * 60 * 1000;
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 const router: IRouter = Router();
+
+// ---------------------------------------------------------------------------
+// Stateless OAuth state — encode PKCE verifier + nonce in the state param
+// (HMAC-signed so it can't be forged). No cookies needed for the OIDC flow.
+// ---------------------------------------------------------------------------
+const OAUTH_STATE_TTL = 10 * 60 * 1000; // 10 min
+
+function encodeOAuthState(data: {
+  nonce: string;
+  codeVerifier: string;
+  returnTo: string;
+}): string {
+  const payload = Buffer.from(
+    JSON.stringify({ ...data, exp: Date.now() + OAUTH_STATE_TTL }),
+  ).toString("base64url");
+  const secret = process.env.SESSION_SECRET ?? "dev-secret";
+  const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return ${payload}.;
+}
+
+interface OAuthStateData {
+  nonce: string;
+  codeVerifier: string;
+  returnTo: string;
+  exp: number;
+}
+
+function decodeOAuthState(state: string): OAuthStateData | null {
+  const dot = state.lastIndexOf(".");
+  if (dot === -1) return null;
+  const payload = state.slice(0, dot);
+  const sig = state.slice(dot + 1);
+  const secret = process.env.SESSION_SECRET ?? "dev-secret";
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
+  if (sig !== expected) return null;
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as OAuthStateData;
+    if (data.exp < Date.now()) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 
 function getOrigin(req: Request): string {
   // APP_URL is the most reliable source — set it in Vercel to your stable
@@ -342,11 +388,6 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
       prompt: "consent",
     });
 
-    setOidcCookie(res, "g_code_verifier", codeVerifier);
-    setOidcCookie(res, "g_nonce", nonce);
-    setOidcCookie(res, "g_state", state);
-    setOidcCookie(res, "g_return_to", returnTo);
-
     res.redirect(redirectTo.href);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -355,20 +396,17 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
 });
 
 router.get("/auth/google/callback", async (req: Request, res: Response) => {
-  const codeVerifier = req.cookies?.g_code_verifier;
-  const nonce = req.cookies?.g_nonce;
-  const expectedState = req.cookies?.g_state;
-  const returnTo = getSafeReturnTo(req.cookies?.g_return_to);
+  // Decode PKCE verifier + nonce from the HMAC-signed state param.
+  // No cookies needed — Google echoes state back unchanged in the callback.
+  const rawState = typeof req.query.state === "string" ? req.query.state : "";
+  const stateData = decodeOAuthState(rawState);
 
-  res.clearCookie("g_code_verifier", { path: "/" });
-  res.clearCookie("g_nonce", { path: "/" });
-  res.clearCookie("g_state", { path: "/" });
-  res.clearCookie("g_return_to", { path: "/" });
-
-  if (!codeVerifier || !expectedState) {
+  if (!stateData) {
     res.redirect("/?auth_error=invalid_state");
     return;
   }
+
+  const { codeVerifier, nonce, returnTo } = stateData;
 
   try {
     const config = await getGoogleOidcConfig();
@@ -381,7 +419,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
     const tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
       pkceCodeVerifier: codeVerifier,
       expectedNonce: nonce,
-      expectedState,
+      expectedState: rawState,
       idTokenExpected: true,
     });
 
