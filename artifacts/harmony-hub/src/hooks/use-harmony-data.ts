@@ -26,6 +26,10 @@ export type Event = {
   time: string;
   color: string;
   memberId?: string;
+  source?: 'google' | 'local';
+  googleId?: string;
+  hidden?: boolean;
+  allDay?: boolean;
 };
 
 export type Chore = {

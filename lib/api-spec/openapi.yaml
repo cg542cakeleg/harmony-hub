@@ -11,6 +11,8 @@ tags:
     description: Health operations
   - name: Auth
     description: Browser authentication endpoints.
+  - name: Calendar
+    description: Google Calendar sync endpoints.
 paths:
   /healthz:
     get:
@@ -136,6 +138,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
+  /calendar/sync:
+    get:
+      tags: [Calendar]
+      operationId: syncGoogleCalendar
+      summary: Fetch next 30 days of events from the user's primary Google Calendar
+      responses:
+        '200':
+          description: Events fetched and ready to merge.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarSyncResponse'
+        '401':
+          description: Not authenticated or token expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarErrorEnvelope'
+        '403':
+          description: No Google token — user must sign in with Google.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarErrorEnvelope'
+  /calendar/push:
+    post:
+      tags: [Calendar]
+      operationId: pushEventToGoogleCalendar
+      summary: Create a new event in the user's primary Google Calendar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarPushRequest'
+      responses:
+        '200':
+          description: Event created in Google Calendar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarPushResponse'
+        '400':
+          description: Missing required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: No Google token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarErrorEnvelope'
 components:
   parameters:
     AuthorizationSessionHeader:
@@ -218,4 +274,67 @@ components:
       required: [error]
       properties:
         error:
+          type: string
+    CalendarEvent:
+      type: object
+      required: [id, title, date, time, color, source, googleId, allDay]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        date:
+          type: string
+          description: YYYY-MM-DD
+        time:
+          type: string
+          description: HH:MM (empty string for all-day events)
+        color:
+          type: string
+        source:
+          type: string
+          enum: [google]
+        googleId:
+          type: string
+        allDay:
+          type: boolean
+    CalendarSyncResponse:
+      type: object
+      required: [events, syncedAt]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarEvent'
+        syncedAt:
+          type: string
+          format: date-time
+    CalendarPushRequest:
+      type: object
+      required: [title, date]
+      properties:
+        title:
+          type: string
+        date:
+          type: string
+          description: YYYY-MM-DD
+        time:
+          type: string
+          description: HH:MM (omit for all-day)
+    CalendarPushResponse:
+      type: object
+      required: [googleId]
+      properties:
+        googleId:
+          type: [string, 'null']
+        htmlLink:
+          type: [string, 'null']
+    CalendarErrorEnvelope:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable code (NO_GOOGLE_TOKEN, TOKEN_EXPIRED, CALENDAR_API_ERROR)
+        message:
           type: string

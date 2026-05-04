@@ -311,11 +311,13 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
 
     const redirectTo = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callbackUrl,
-      scope: "openid email profile",
+      scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
       state,
       nonce,
+      access_type: "offline",
+      prompt: "consent",
     });
 
     setOidcCookie(res, "g_code_verifier", codeVerifier);
