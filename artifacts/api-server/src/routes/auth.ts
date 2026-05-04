@@ -351,9 +351,10 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   try {
     const config = await getGoogleOidcConfig();
     const callbackUrl = `${getOrigin(req)}/api/auth/google/callback`;
-    const currentUrl = new URL(
-      `${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`,
-    );
+    const currentUrl = new URL(callbackUrl);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") currentUrl.searchParams.set(key, value);
+    }
 
     const tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
       pkceCodeVerifier: codeVerifier,
