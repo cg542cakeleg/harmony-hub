@@ -1,4 +1,4 @@
-import * as oidcClient from "openid-client";
+﻿import * as oidcClient from "openid-client";
 import crypto from "crypto";
 import { type Request, type Response } from "express";
 import { db, sessionsTable, usersTable } from "@workspace/db";
@@ -98,7 +98,7 @@ export function setSessionCookie(res: Response, sid: string): void {
   res.cookie(SESSION_COOKIE, sid, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL,
   });
@@ -106,7 +106,7 @@ export function setSessionCookie(res: Response, sid: string): void {
 
 export function getSafeReturnTo(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
-    return "/harmony-hub/";
+    return "/";
   }
   return value;
 }
