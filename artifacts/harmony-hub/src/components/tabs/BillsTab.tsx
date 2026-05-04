@@ -162,7 +162,10 @@ export function BillsTab({ data, updateData }: { data: any; updateData: any }) {
         const updatedBill: Bill = { ...b, status: nextStatus };
         if (nextStatus === 'PAID') {
           const next = advanceRecurringBill(updatedBill);
-          if (next) return [updatedBill, next];
+          // Only append next occurrence if one with the same name + dueDate doesn't already exist
+          if (next && !prev.bills.some((x: Bill) => x.name === next.name && x.dueDate === next.dueDate && x.status !== 'PAID')) {
+            return [updatedBill, next];
+          }
         }
         return [updatedBill];
       });
@@ -179,7 +182,7 @@ export function BillsTab({ data, updateData }: { data: any; updateData: any }) {
     const d = new Date(b.dueDate + 'T00:00:00');
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
   });
-  const totalDue = monthBills.filter(b => b.status !== 'PAID').reduce((s, b) => s + b.amount, 0);
+  const totalDue = monthBills.filter(b => b.status === 'DUE').reduce((s, b) => s + b.amount, 0);
   const totalPaid = monthBills.filter(b => b.status === 'PAID').reduce((s, b) => s + b.amount, 0);
   const totalOverdue = monthBills.filter(b => b.status === 'OVERDUE').reduce((s, b) => s + b.amount, 0);
 
