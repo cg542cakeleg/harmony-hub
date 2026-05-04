@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/harmony-hub/"
+title = "Harmony Hub"
+version = "1.0.0"
+id = "artifacts/harmony-hub"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/harmony-hub/" ]
+localPort = 21984
+
+[services.development]
+run = "pnpm --filter @workspace/harmony-hub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/harmony-hub", "run", "build" ]
+publicDir = "artifacts/harmony-hub/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21984"
+BASE_PATH = "/harmony-hub/"

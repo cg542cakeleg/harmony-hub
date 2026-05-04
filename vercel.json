@@ -1,4 +1,12 @@
 {
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/harmony-hub run build",
+  "outputDirectory": "artifacts/harmony-hub/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "env": {
+    "BASE_PATH": "/",
+    "NODE_ENV": "production"
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
