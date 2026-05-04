@@ -226,7 +226,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
           {mode === 'choose' && (
             <>
               <div style={{ textAlign: 'center' }}>
-                <Pixel size={22} color={C.navy}>SELECT LOGIN METHOD</Pixel>
+                <Pixel size={22} color={C.navy} style={{ display: 'block' }}>SELECT LOGIN METHOD</Pixel>
                 <Mono style={{ fontSize: 13, color: '#666', marginTop: 6 }}>Sign in to access your family dashboard</Mono>
               </div>
               <button onClick={handleGoogleLogin} data-testid="btn-google-login" style={{
