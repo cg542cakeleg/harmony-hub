@@ -53,6 +53,9 @@ export type NamedList = {
   items: ListItem[];
 };
 
+export type BillCategory = 'Housing' | 'Utilities' | 'Subscriptions' | 'Insurance' | 'Debt' | 'Other';
+export type BillFrequency = 'One-time' | 'Monthly' | 'Quarterly' | 'Annual';
+
 export type Bill = {
   id: string;
   name: string;
@@ -61,6 +64,12 @@ export type Bill = {
   status: 'PAID' | 'DUE' | 'OVERDUE';
   memberId?: string;
   recurring: boolean;
+  // Extended fields
+  category: BillCategory;
+  account: string;
+  frequency: BillFrequency;
+  autopay: boolean;
+  notes: string;
 };
 
 export type HarmonyData = {
@@ -88,12 +97,73 @@ const DEFAULT_DATA: HarmonyData = {
 
 const STORAGE_KEY = 'harmony-hub-data';
 
+function migrateBill(b: any): Bill {
+  return {
+    id: b.id ?? Math.random().toString(36).substring(7),
+    name: b.name ?? '',
+    amount: typeof b.amount === 'number' ? b.amount : parseFloat(b.amount) || 0,
+    dueDate: b.dueDate ?? '',
+    status: b.status ?? 'DUE',
+    memberId: b.memberId,
+    recurring: b.recurring ?? false,
+    category: b.category ?? 'Other',
+    account: b.account ?? '',
+    frequency: b.frequency ?? (b.recurring ? 'Monthly' : 'One-time'),
+    autopay: b.autopay ?? false,
+    notes: b.notes ?? '',
+  };
+}
+
+function applyOverdueFlags(bills: Bill[]): Bill[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return bills.map(b => {
+    if (b.status === 'DUE' && b.dueDate) {
+      const due = new Date(b.dueDate + 'T00:00:00');
+      if (due < today) return { ...b, status: 'OVERDUE' };
+    }
+    return b;
+  });
+}
+
+export function advanceRecurringBill(bill: Bill): Bill {
+  if (!bill.dueDate) return bill;
+  const d = new Date(bill.dueDate + 'T00:00:00');
+  switch (bill.frequency) {
+    case 'Monthly':
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case 'Quarterly':
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case 'Annual':
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+    default:
+      return bill;
+  }
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return {
+    ...bill,
+    id: Math.random().toString(36).substring(7),
+    dueDate: `${yyyy}-${mm}-${dd}`,
+    status: 'DUE',
+  };
+}
+
 export function useHarmonyData() {
   const [data, setData] = useState<HarmonyData>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored) as HarmonyData;
+        const parsed = JSON.parse(stored) as HarmonyData;
+        const migrated: HarmonyData = {
+          ...parsed,
+          bills: applyOverdueFlags((parsed.bills ?? []).map(migrateBill)),
+        };
+        return migrated;
       }
     } catch (e) {
       console.error('Error loading data', e);
