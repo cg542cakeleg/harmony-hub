@@ -24,6 +24,29 @@ export const loginRateLimit = rateLimit({
   skip: () => process.env.NODE_ENV === "development",
 });
 
+// Per-email in-memory tracker for login attempts (complements per-IP)
+const emailAttemptMap = new Map<string, { count: number; resetAt: number }>();
+const EMAIL_WINDOW_MS = 15 * 60 * 1000;
+const EMAIL_MAX_ATTEMPTS = 10;
+
+export function checkEmailRateLimit(email: string): { allowed: boolean; resetAt?: Date } {
+  const now = Date.now();
+  const entry = emailAttemptMap.get(email);
+  if (!entry || now > entry.resetAt) {
+    emailAttemptMap.set(email, { count: 1, resetAt: now + EMAIL_WINDOW_MS });
+    return { allowed: true };
+  }
+  entry.count += 1;
+  if (entry.count > EMAIL_MAX_ATTEMPTS) {
+    return { allowed: false, resetAt: new Date(entry.resetAt) };
+  }
+  return { allowed: true };
+}
+
+export function clearEmailRateLimit(email: string): void {
+  emailAttemptMap.delete(email);
+}
+
 export const MAX_LOGIN_ATTEMPTS = 5;
 export const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
