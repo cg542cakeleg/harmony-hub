@@ -379,10 +379,17 @@ export function useFeaturedPhoto(): string | null {
         const firstAlbum = albumsData.albums?.[0];
         if (!firstAlbum) return;
 
-        const itemsRes = await fetch(`/api/photos/albums/${firstAlbum.id}?pageSize=10`, { credentials: 'include' });
+        const itemsRes = await fetch(`/api/photos/albums/${firstAlbum.id}?pageSize=20`, { credentials: 'include' });
         if (!itemsRes.ok) return;
         const itemsData = await itemsRes.json() as { mediaItems?: MediaItem[] };
-        const firstItem = itemsData.mediaItems?.[0];
+        // Sort by newest createdAt to get the most recent family photo
+        const items = (itemsData.mediaItems ?? []).filter(m => m.baseUrl);
+        items.sort((a, b) => {
+          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tb - ta;
+        });
+        const firstItem = items[0];
         if (!firstItem?.baseUrl) return;
 
         const photoUrl = `${firstItem.baseUrl}=w600-h400-c`;
