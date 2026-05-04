@@ -64,10 +64,11 @@ export const RetroCheck = ({ checked, label, sub, color, onClick, testId }: { ch
   </div>
 );
 
-export const Button = ({ children, onClick, bg = C.white, testId, style }: { children: React.ReactNode; onClick?: () => void; bg?: string; testId?: string; style?: CSSProperties }) => {
+export const Button = ({ children, onClick, bg = C.white, testId, style, type = 'button' }: { children: React.ReactNode; onClick?: () => void; bg?: string; testId?: string; style?: CSSProperties; type?: 'button' | 'submit' | 'reset' }) => {
   const [pressed, setPressed] = useState(false);
   return (
     <button
+      type={type}
       data-testid={testId}
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}

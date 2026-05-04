@@ -25,21 +25,17 @@ export interface AuthUserEnvelope {
   user: AuthUser | null;
 }
 
-export interface MobileTokenExchangeRequest {
-  /** @minLength 1 */
-  code: string;
-  /** @minLength 1 */
-  code_verifier: string;
-  /** @minLength 1 */
-  redirect_uri: string;
-  /** @minLength 1 */
-  state: string;
-  /** @minLength 1 */
-  nonce?: string;
+export interface RegisterRequest {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  firstName?: string;
+  lastName?: string;
 }
 
-export interface MobileTokenExchangeSuccess {
-  token: string;
+export interface LoginRequest {
+  email: string;
+  password: string;
 }
 
 export const LogoutSuccessValue = {
@@ -56,15 +52,6 @@ export interface ErrorEnvelope {
  */
 export type AuthorizationSessionHeaderParameter = string;
 
-export type BeginBrowserLoginParams = {
-  /**
-   * Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-   */
+export type BeginGoogleLoginParams = {
   returnTo?: string;
-};
-
-export type HandleBrowserLoginCallbackParams = {
-  code?: string;
-  state?: string;
-  iss?: string;
 };
