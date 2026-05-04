@@ -216,8 +216,8 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         {/* Boot panel */}
         <div style={{ background: C.navy, padding: '18px 28px', borderBottom: `4px solid ${C.navy}`, textAlign: 'center' }}>
           <Pixel size={36} color={C.gold} style={{ display: 'block', letterSpacing: '0.05em' }}>HARMONY HUB</Pixel>
-          <Mono style={{ fontSize: 12, color: C.cream, marginTop: 4, letterSpacing: '0.12em' }}>FAMILY MANAGEMENT SYSTEM v2.0</Mono>
-          <Mono style={{ fontSize: 11, color: C.green, marginTop: 8 }}>SYSTEM READY<span className="blink">_</span></Mono>
+          <Mono style={{ fontSize: 12, color: C.cream, marginTop: 4, letterSpacing: '0.12em', display: 'block' }}>FAMILY MANAGEMENT SYSTEM v2.0</Mono>
+          <Mono style={{ fontSize: 11, color: C.green, marginTop: 8, display: 'block' }}>SYSTEM READY<span className="blink">_</span></Mono>
         </div>
 
         <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
