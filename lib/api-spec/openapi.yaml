@@ -13,6 +13,8 @@ tags:
     description: Browser authentication endpoints.
   - name: Calendar
     description: Google Calendar sync endpoints.
+  - name: Photos
+    description: Google Photos integration endpoints.
 paths:
   /healthz:
     get:
@@ -204,6 +206,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CalendarErrorEnvelope'
+  /photos/status:
+    get:
+      tags: [Photos]
+      operationId: getPhotosStatus
+      summary: Check whether the signed-in user has a Google Photos access token
+      responses:
+        '200':
+          description: Photos access status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosStatusResponse'
+  /photos/albums:
+    get:
+      tags: [Photos]
+      operationId: listPhotoAlbums
+      summary: List the user's Google Photos albums
+      responses:
+        '200':
+          description: Albums fetched successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosAlbumsResponse'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosErrorEnvelope'
+        '403':
+          description: No Google token or insufficient scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosErrorEnvelope'
+  /photos/albums/{albumId}:
+    get:
+      tags: [Photos]
+      operationId: listAlbumMediaItems
+      summary: List media items (photos) inside a specific album
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Media items fetched successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosMediaItemsResponse'
+        '401':
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosErrorEnvelope'
+        '403':
+          description: No Google token or insufficient scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosErrorEnvelope'
 components:
   parameters:
     AuthorizationSessionHeader:
@@ -347,6 +422,67 @@ components:
       properties:
         hasCalendarAccess:
           type: boolean
+    PhotosStatusResponse:
+      type: object
+      required: [hasPhotosAccess]
+      properties:
+        hasPhotosAccess:
+          type: boolean
+    PhotoAlbum:
+      type: object
+      required: [id, title, mediaItemsCount]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        coverPhotoBaseUrl:
+          type: [string, 'null']
+        mediaItemsCount:
+          type: integer
+        productUrl:
+          type: [string, 'null']
+    PhotosAlbumsResponse:
+      type: object
+      required: [albums]
+      properties:
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoAlbum'
+    PhotoMediaItem:
+      type: object
+      required: [id, filename]
+      properties:
+        id:
+          type: string
+        baseUrl:
+          type: [string, 'null']
+        filename:
+          type: string
+        createdAt:
+          type: [string, 'null']
+        width:
+          type: integer
+        height:
+          type: integer
+    PhotosMediaItemsResponse:
+      type: object
+      required: [mediaItems]
+      properties:
+        mediaItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoMediaItem'
+    PhotosErrorEnvelope:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable code (NO_GOOGLE_TOKEN, TOKEN_EXPIRED, INSUFFICIENT_SCOPE, PHOTOS_API_ERROR)
+        message:
+          type: string
     CalendarErrorEnvelope:
       type: object
       required: [error, message]

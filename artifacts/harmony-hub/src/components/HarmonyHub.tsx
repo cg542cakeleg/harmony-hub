@@ -8,6 +8,9 @@ import { ChoresTab } from './tabs/ChoresTab';
 import { ListsTab } from './tabs/ListsTab';
 import { BillsTab } from './tabs/BillsTab';
 import { CalendarTab } from './tabs/CalendarTab';
+import { PhotosTab, useFeaturedPhoto } from './tabs/PhotosTab';
+
+const VIOLET = '#7C3AED';
 
 const TitleBar = ({ title }: { title: string }) => {
   const { user, isLoading, isAuthenticated, login, logout } = useAuth();
@@ -112,6 +115,7 @@ export function HarmonyHub() {
     { label: 'CHORES',   color: C.green },
     { label: 'LISTS',    color: C.orange },
     { label: 'BILLS',    color: C.red },
+    { label: 'PHOTOS',   color: VIOLET },
   ];
 
   return (
@@ -132,6 +136,7 @@ export function HarmonyHub() {
           {activeTab === 'CHORES' && <ChoresTab data={data} updateData={updateData} />}
           {activeTab === 'LISTS' && <ListsTab data={data} updateData={updateData} />}
           {activeTab === 'BILLS' && <BillsTab data={data} updateData={updateData} />}
+          {activeTab === 'PHOTOS' && <PhotosTab />}
         </div>
         
         <div style={{ background: C.navy, borderTop: `4px solid ${C.navy}`, padding: '4px 14px', display: 'flex', gap: 20, alignItems: 'center', overflow: 'hidden' }}>
@@ -154,6 +159,7 @@ function HomeTab({ data, updateData }: { data: any, updateData: any }) {
   const totalChores = data.chores.length;
   const pct = totalChores > 0 ? (completedChores / totalChores) * 100 : 0;
   const [manageOpen, setManageOpen] = useState(false);
+  const featuredPhoto = useFeaturedPhoto();
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberColor, setNewMemberColor] = useState(C.blue);
 
@@ -227,6 +233,21 @@ function HomeTab({ data, updateData }: { data: any, updateData: any }) {
             <Pixel size={52} color={stat.color} style={{ display: 'block', lineHeight: 1.1 }}>{stat.value}</Pixel>
           </div>
         ))}
+
+        {featuredPhoto && (
+          <div style={{ ...panelStyle(C.navy), overflow: 'hidden' }} data-testid="featured-photo-panel">
+            <div style={{ background: VIOLET, borderBottom: `3px solid ${C.navy}`, padding: '5px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Pixel size={18} color={C.white}>📷 FAMILY PHOTO</Pixel>
+              <Mono style={{ fontSize: 10, color: C.cream }}>TODAY</Mono>
+            </div>
+            <img
+              src={featuredPhoto}
+              alt="Family photo"
+              loading="lazy"
+              style={{ width: '100%', display: 'block', maxHeight: 200, objectFit: 'cover' }}
+            />
+          </div>
+        )}
 
         <div style={{ ...panelStyle(C.white) }}>
           <div style={{ background: C.orange, borderBottom: `4px solid ${C.navy}`, padding: '5px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
