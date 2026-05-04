@@ -138,6 +138,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogoutSuccess'
+  /calendar/status:
+    get:
+      tags: [Calendar]
+      operationId: getCalendarStatus
+      summary: Check whether the signed-in user has a Google Calendar access token
+      responses:
+        '200':
+          description: Calendar access status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarStatusResponse'
   /calendar/sync:
     get:
       tags: [Calendar]
@@ -329,6 +341,12 @@ components:
           type: [string, 'null']
         htmlLink:
           type: [string, 'null']
+    CalendarStatusResponse:
+      type: object
+      required: [hasCalendarAccess]
+      properties:
+        hasCalendarAccess:
+          type: boolean
     CalendarErrorEnvelope:
       type: object
       required: [error, message]
