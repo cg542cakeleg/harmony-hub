@@ -47,6 +47,8 @@ async function getAuthedCalendar(
       const updated: SessionData = {
         ...session,
         access_token: accessToken,
+        // Persist rotated refresh_token when the provider returns a new one
+        refresh_token: refreshed.refresh_token ?? session.refresh_token,
         expires_at: refreshed.expiresIn()
           ? Math.floor(Date.now() / 1000) + refreshed.expiresIn()!
           : session.expires_at,
@@ -170,6 +172,16 @@ router.get("/calendar/sync", async (req: Request, res: Response) => {
         error: "TOKEN_EXPIRED",
         message: "Google token expired. Please sign in with Google again.",
       });
+    } else if (
+      msg.includes("insufficientPermissions") ||
+      msg.includes("forbidden") ||
+      msg.includes("403") ||
+      msg.toLowerCase().includes("scope")
+    ) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Google Calendar permission not granted. Please sign in with Google again to allow calendar access.",
+      });
     } else {
       res.status(502).json({ error: "CALENDAR_API_ERROR", message: msg });
     }
@@ -206,13 +218,17 @@ router.post("/calendar/push", async (req: Request, res: Response) => {
     if (time) {
       // Use floating datetime (no timeZone) so Google Calendar respects the user's
       // calendar timezone setting rather than forcing UTC interpretation.
+      // Compute end time (+1 hour) using real Date arithmetic to correctly roll over midnight.
       const startISO = `${date}T${time}:00`;
-      const endHour = parseInt(time.slice(0, 2), 10);
-      const endMin = parseInt(time.slice(3, 5), 10);
-      const totalMin = endHour * 60 + endMin + 60;
-      const endHourStr = String(Math.floor(totalMin / 60) % 24).padStart(2, "0");
-      const endMinStr = String(totalMin % 60).padStart(2, "0");
-      const endISO = `${date}T${endHourStr}:${endMinStr}:00`;
+      // Parse as a local floating datetime; add 3600 seconds to get end time
+      const [y, mo, d2] = (date as string).split("-").map(Number);
+      const [hh, mm] = (time as string).split(":").map(Number);
+      const startMs = new Date(y, mo - 1, d2, hh, mm, 0).getTime();
+      const endMs = startMs + 60 * 60 * 1000;
+      const endD = new Date(endMs);
+      const endISO =
+        `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, "0")}-${String(endD.getDate()).padStart(2, "0")}` +
+        `T${String(endD.getHours()).padStart(2, "0")}:${String(endD.getMinutes()).padStart(2, "0")}:00`;
       start = { dateTime: startISO };
       end = { dateTime: endISO };
     } else {
