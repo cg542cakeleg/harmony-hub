@@ -279,7 +279,7 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
         }}>
           <Mono style={{ fontSize: 13, color: C.white, flex: 1 }}>⚠ {syncError}</Mono>
           <div style={{ display: 'flex', gap: 8 }}>
-            {(syncErrorCode === 'NO_GOOGLE_TOKEN' || syncErrorCode === 'TOKEN_EXPIRED') && (
+            {(syncErrorCode === 'NO_GOOGLE_TOKEN' || syncErrorCode === 'TOKEN_EXPIRED' || syncErrorCode === 'INSUFFICIENT_SCOPE') && (
               <Button
                 bg={GOOGLE_BLUE}
                 onClick={() => { window.location.href = '/api/auth/google?returnTo=/harmony-hub/'; }}
