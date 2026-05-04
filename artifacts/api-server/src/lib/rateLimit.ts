@@ -24,7 +24,9 @@ export const loginRateLimit = rateLimit({
   skip: () => process.env.NODE_ENV === "development",
 });
 
-// Per-email in-memory tracker for login attempts (complements per-IP)
+// Per-email in-memory tracker for login attempts (complements per-IP).
+// Note: resets on process restart and is not shared across multiple instances.
+// For production multi-instance deployments, replace with a DB or Redis-backed store.
 const emailAttemptMap = new Map<string, { count: number; resetAt: number }>();
 const EMAIL_WINDOW_MS = 15 * 60 * 1000;
 const EMAIL_MAX_ATTEMPTS = 10;

@@ -8,8 +8,13 @@ export const sessionsTable = pgTable(
     sid: varchar("sid").primaryKey(),
     sess: jsonb("sess").notNull(),
     expire: timestamp("expire").notNull(),
+    // Denormalized for efficient per-user session invalidation
+    userId: varchar("user_id"),
   },
-  (table) => [index("IDX_session_expire").on(table.expire)],
+  (table) => [
+    index("IDX_session_expire").on(table.expire),
+    index("IDX_session_user_id").on(table.userId),
+  ],
 );
 
 // (IMPORTANT) This table is mandatory for auth, don't drop it.
