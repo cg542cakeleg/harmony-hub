@@ -64,17 +64,18 @@ export const RetroCheck = ({ checked, label, sub, color, onClick, testId }: { ch
   </div>
 );
 
-export const Button = ({ children, onClick, bg = C.white, testId, style, type = 'button' }: { children: React.ReactNode; onClick?: () => void; bg?: string; testId?: string; style?: CSSProperties; type?: 'button' | 'submit' | 'reset' }) => {
+export const Button = ({ children, onClick, bg = C.white, testId, style, type = 'button', disabled = false }: { children: React.ReactNode; onClick?: () => void; bg?: string; testId?: string; style?: CSSProperties; type?: 'button' | 'submit' | 'reset'; disabled?: boolean }) => {
   const [pressed, setPressed] = useState(false);
   return (
     <button
       type={type}
       data-testid={testId}
+      disabled={disabled}
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
       onMouseLeave={() => setPressed(false)}
       onClick={onClick}
-      style={{ ...raisedStyle(bg, pressed), ...style }}
+      style={{ ...raisedStyle(bg, pressed), ...style, ...(disabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}) }}
     >
       {children}
     </button>

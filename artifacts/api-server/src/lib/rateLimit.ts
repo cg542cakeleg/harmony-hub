@@ -1,4 +1,4 @@
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import rateLimit from "express-rate-limit";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -9,7 +9,7 @@ export const authRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "TOO_MANY_REQUESTS", message: "Too many requests, try again in 15 minutes." },
-  keyGenerator: (req) => ipKeyGenerator(req),
+  keyGenerator: (req) => req.ip ?? "unknown",
   skip: () => process.env.NODE_ENV === "development",
 });
 
@@ -20,7 +20,7 @@ export const loginRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "TOO_MANY_REQUESTS", message: "Too many login attempts, try again in 15 minutes." },
-  keyGenerator: (req) => ipKeyGenerator(req),
+  keyGenerator: (req) => req.ip ?? "unknown",
   skip: () => process.env.NODE_ENV === "development",
 });
 

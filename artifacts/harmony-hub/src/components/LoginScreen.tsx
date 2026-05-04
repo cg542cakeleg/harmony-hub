@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { C } from '../hooks/use-harmony-data';
 import { Pixel, Mono, Button, scanlinesBg, insetStyle } from './RetroUI';
 import { csrfFetch } from '@workspace/replit-auth-web';
@@ -66,8 +66,27 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const go = (m: Mode) => { setMode(m); setError(''); setSuccess(''); };
+  const go = (m: Mode) => { setMode(m); setError(''); setSuccess(''); setLockoutSeconds(0); };
+
+  const startLockoutCountdown = useCallback((seconds: number) => {
+    setLockoutSeconds(seconds);
+    if (lockoutTimer.current) clearInterval(lockoutTimer.current);
+    lockoutTimer.current = setInterval(() => {
+      setLockoutSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(lockoutTimer.current!);
+          lockoutTimer.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => () => { if (lockoutTimer.current) clearInterval(lockoutTimer.current); }, []);
 
   // Check URL for reset token on mount
   useState(() => {
@@ -93,11 +112,18 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? 'Login failed.'); }
-      else { onSuccess(); }
+      if (!res.ok) {
+        const msg: string = data.error ?? 'Login failed.';
+        setError(msg);
+        // Parse "locked for N minutes" and start a visible countdown
+        const minsMatch = msg.match(/(\d+)\s*minute/);
+        if (minsMatch) startLockoutCountdown(parseInt(minsMatch[1], 10) * 60);
+      } else {
+        onSuccess();
+      }
     } catch { setError('Network error. Please try again.'); }
     finally { setLoading(false); }
-  }, [email, password, onSuccess]);
+  }, [email, password, onSuccess, startLockoutCountdown]);
 
   const handleRegister = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,7 +281,15 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
               </div>
               {success && <SuccessBox msg={success} />}
               {error && <ErrorBox msg={error} />}
-              <Button type="submit" bg={C.navy} style={{ padding: '12px 0', width: '100%' }} testId="btn-submit-login">
+              {lockoutSeconds > 0 && (
+                <div style={{ background: C.orange, border: `2px solid ${C.navy}`, padding: '8px 12px', textAlign: 'center' }}>
+                  <Mono style={{ fontSize: 14, color: C.navy }}>
+                    RETRY IN {Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, '0')}
+                  </Mono>
+                </div>
+              )}
+              <Button type="submit" bg={C.navy} style={{ padding: '12px 0', width: '100%' }}
+                testId="btn-submit-login" disabled={lockoutSeconds > 0}>
                 <Pixel size={20} color={C.gold}>{loading ? 'LOGGING IN...' : 'LOG IN'}</Pixel>
               </Button>
               <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'space-between' }}>

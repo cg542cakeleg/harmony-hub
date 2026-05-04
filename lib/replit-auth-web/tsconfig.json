@@ -7,7 +7,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "lib": ["dom", "es2022"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "jsx": "react-jsx"
   },
   "include": ["src"],
   "references": [
