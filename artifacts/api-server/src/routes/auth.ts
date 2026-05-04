@@ -372,10 +372,10 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
     const callbackUrl = `${getOrigin(req)}/api/auth/google/callback`;
     const returnTo = getSafeReturnTo(req.query.returnTo);
 
-    const state = oidc.randomState();
     const nonce = oidc.randomNonce();
     const codeVerifier = oidc.randomPKCECodeVerifier();
     const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
+    const state = encodeOAuthState({ nonce, codeVerifier, returnTo });
 
     const redirectTo = oidc.buildAuthorizationUrl(config, {
       redirect_uri: callbackUrl,
