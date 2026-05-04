@@ -49,7 +49,7 @@ function encodeOAuthState(data: {
   ).toString("base64url");
   const secret = process.env.SESSION_SECRET ?? "dev-secret";
   const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
-  return ${payload}.;
+  return `${payload}.${sig}`;
 }
 
 interface OAuthStateData {
