@@ -2,9 +2,7 @@ import * as oidc from "openid-client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
-import {
-  GetCurrentAuthUserResponse,
-} from "@workspace/api-zod";
+import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
 import { db, usersTable, sessionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
@@ -32,7 +30,7 @@ import { CSRF_COOKIE } from "../lib/csrf";
 
 const OIDC_COOKIE_TTL = 10 * 60 * 1000;
 const BCRYPT_ROUNDS = 12;
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 const router: IRouter = Router();
 
@@ -46,21 +44,27 @@ function setOidcCookie(res: Response, name: string, value: string) {
   res.cookie(name, value, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax", // must be lax for OAuth redirects
+    sameSite: "lax",
     path: "/",
     maxAge: OIDC_COOKIE_TTL,
   });
 }
 
-// ─── CSRF token endpoint (allows frontend to bootstrap the token) ──────────────
+async function invalidateAllUserSessions(userId: string): Promise<void> {
+  const allSessions = await db.select().from(sessionsTable);
+  for (const s of allSessions) {
+    const sess = s.sess as { user?: { id?: string } };
+    if (sess?.user?.id === userId) {
+      await deleteSession(s.sid);
+    }
+  }
+}
+
 router.get("/auth/csrf", (_req: Request, res: Response) => {
-  // csrfMiddleware already issues/refreshes the cookie on every GET.
-  // This endpoint just returns the token value so JS can read it.
   const token = _req.cookies?.[CSRF_COOKIE] ?? "";
   res.json({ csrfToken: token });
 });
 
-// ─── Current user ─────────────────────────────────────────────────────────────
 router.get("/auth/user", (req: Request, res: Response) => {
   res.json(
     GetCurrentAuthUserResponse.parse({
@@ -69,7 +73,6 @@ router.get("/auth/user", (req: Request, res: Response) => {
   );
 });
 
-// ─── Email / Password registration ───────────────────────────────────────────
 router.post("/auth/register", authRateLimit, async (req: Request, res: Response) => {
   const { email, password, firstName, lastName } = req.body ?? {};
 
@@ -82,20 +85,17 @@ router.post("/auth/register", authRateLimit, async (req: Request, res: Response)
     return;
   }
   const emailLower = (email as string).toLowerCase().trim();
-  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRe.test(emailLower)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) {
     res.status(400).json({ error: "Invalid email address." });
     return;
   }
 
-  // Per-email rate limit
   const emailCheck = checkEmailRateLimit(emailLower);
   if (!emailCheck.allowed) {
     res.status(429).json({ error: "Too many registration attempts for this email. Try again later." });
     return;
   }
 
-  // Check existing
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, emailLower));
   if (existing) {
     res.status(409).json({ error: "An account with this email already exists." });
@@ -103,7 +103,6 @@ router.post("/auth/register", authRateLimit, async (req: Request, res: Response)
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
   const [user] = await db
     .insert(usersTable)
     .values({
@@ -130,7 +129,6 @@ router.post("/auth/register", authRateLimit, async (req: Request, res: Response)
   res.status(201).json({ user: sessionData.user });
 });
 
-// ─── Email / Password login ───────────────────────────────────────────────────
 router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) => {
   const { email, password } = req.body ?? {};
 
@@ -141,14 +139,12 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
 
   const emailLower = (email as string).toLowerCase().trim();
 
-  // Per-email rate limit (complements per-IP)
   const emailCheck = checkEmailRateLimit(emailLower);
   if (!emailCheck.allowed) {
     res.status(429).json({ error: "Too many login attempts for this email. Try again later." });
     return;
   }
 
-  // Check DB-level lockout
   const lockStatus = await isAccountLocked(emailLower);
   if (lockStatus.locked) {
     const mins = lockStatus.until
@@ -161,7 +157,6 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, emailLower));
 
   if (!user || !user.passwordHash) {
-    // Don't reveal whether email exists
     res.status(401).json({ error: "Invalid email or password." });
     return;
   }
@@ -177,7 +172,6 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
     return;
   }
 
-  // Success — clear failed attempts
   await clearFailedLogins(emailLower);
   clearEmailRateLimit(emailLower);
 
@@ -196,7 +190,6 @@ router.post("/auth/login", loginRateLimit, async (req: Request, res: Response) =
   res.json({ user: sessionData.user });
 });
 
-// ─── Password change ──────────────────────────────────────────────────────────
 router.post("/auth/change-password", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Must be logged in to change password." });
@@ -231,20 +224,13 @@ router.post("/auth/change-password", async (req: Request, res: Response) => {
     .set({ passwordHash: newHash, updatedAt: new Date() })
     .where(eq(usersTable.id, user.id));
 
-  // Invalidate ALL sessions for this user except the current one
-  const currentSid = getSessionId(req);
-  const allSessions = await db.select().from(sessionsTable);
-  for (const s of allSessions) {
-    const sess = s.sess as { user?: { id?: string } };
-    if (sess?.user?.id === user.id && s.sid !== currentSid) {
-      await deleteSession(s.sid);
-    }
-  }
+  // Invalidate ALL sessions including current — user must re-authenticate
+  await invalidateAllUserSessions(user.id);
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
 
   res.json({ success: true });
 });
 
-// ─── Forgot password (request reset) ─────────────────────────────────────────
 router.post("/auth/forgot-password", authRateLimit, async (req: Request, res: Response) => {
   const { email } = req.body ?? {};
   if (!email) {
@@ -264,8 +250,7 @@ router.post("/auth/forgot-password", authRateLimit, async (req: Request, res: Re
       .set({ passwordResetToken: token, passwordResetExpiry: expiry, updatedAt: new Date() })
       .where(eq(usersTable.id, user.id));
 
-    // TODO: Send email with reset link: /harmony-hub/?reset_token=<token>
-    // Until email sending is wired up, log the token in dev
+    // TODO: send email with link /harmony-hub/?reset_token=<token>
     if (process.env.NODE_ENV !== "production") {
       console.log(`[DEV] Password reset token for ${emailLower}: ${token}`);
     }
@@ -274,7 +259,6 @@ router.post("/auth/forgot-password", authRateLimit, async (req: Request, res: Re
   res.json({ message: "If that email is registered, a reset link has been sent." });
 });
 
-// ─── Forgot password (confirm reset) ─────────────────────────────────────────
 router.post("/auth/reset-password", authRateLimit, async (req: Request, res: Response) => {
   const { token, newPassword } = req.body ?? {};
   if (!token || !newPassword) {
@@ -309,19 +293,12 @@ router.post("/auth/reset-password", authRateLimit, async (req: Request, res: Res
     })
     .where(eq(usersTable.id, user.id));
 
-  // Invalidate ALL sessions for this user after password reset
-  const allSessions = await db.select().from(sessionsTable);
-  for (const s of allSessions) {
-    const sess = s.sess as { user?: { id?: string } };
-    if (sess?.user?.id === user.id) {
-      await deleteSession(s.sid);
-    }
-  }
+  // Invalidate all sessions after password reset
+  await invalidateAllUserSessions(user.id);
 
   res.json({ success: true });
 });
 
-// ─── Google OAuth ─────────────────────────────────────────────────────────────
 router.get("/auth/google", authRateLimit, async (req: Request, res: Response) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     res.status(503).json({ error: "Google OAuth is not configured." });
@@ -420,13 +397,6 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   }
 });
 
-// ─── Logout ───────────────────────────────────────────────────────────────────
-router.get("/auth/logout", async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
-  res.redirect("/harmony-hub/");
-});
-
 router.post("/auth/logout", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
   if (sid) await deleteSession(sid);
@@ -434,14 +404,7 @@ router.post("/auth/logout", async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-// ─── Legacy redirect compatibility ───────────────────────────────────────────
 router.get("/login", (_req: Request, res: Response) => {
-  res.redirect("/harmony-hub/");
-});
-
-router.get("/logout", async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
   res.redirect("/harmony-hub/");
 });
 
