@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/harmony-hub run build",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/harmony-hub run build",
   "outputDirectory": "artifacts/harmony-hub/dist/public",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": null,
