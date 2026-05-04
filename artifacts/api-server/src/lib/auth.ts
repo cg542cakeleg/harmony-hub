@@ -42,6 +42,7 @@ export async function createSession(data: SessionData): Promise<string> {
     sid,
     sess: data as unknown as Record<string, unknown>,
     expire: new Date(Date.now() + SESSION_TTL),
+    userId: data.user.id,
   });
   return sid;
 }

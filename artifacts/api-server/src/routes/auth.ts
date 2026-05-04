@@ -51,13 +51,7 @@ function setOidcCookie(res: Response, name: string, value: string) {
 }
 
 async function invalidateAllUserSessions(userId: string): Promise<void> {
-  const allSessions = await db.select().from(sessionsTable);
-  for (const s of allSessions) {
-    const sess = s.sess as { user?: { id?: string } };
-    if (sess?.user?.id === userId) {
-      await deleteSession(s.sid);
-    }
-  }
+  await db.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
 }
 
 router.get("/auth/csrf", (_req: Request, res: Response) => {
