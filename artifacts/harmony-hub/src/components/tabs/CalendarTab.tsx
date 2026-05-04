@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { C, type Event } from '../../hooks/use-harmony-data';
 import { Mono, Pixel, Button, panelStyle, insetStyle } from '../RetroUI';
 import { csrfFetch } from '@workspace/replit-auth-web';
@@ -39,6 +39,19 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncErrorCode, setSyncErrorCode] = useState<string | null>(null);
+
+  // Whether the signed-in user has a Google Calendar token
+  const [hasCalendarAccess, setHasCalendarAccess] = useState<boolean | null>(null);
+
+  // Show/hide toggle for Google events hidden by the user
+  const [showHidden, setShowHidden] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/calendar/status', { credentials: 'include' })
+      .then(r => r.json())
+      .then((d: { hasCalendarAccess: boolean }) => setHasCalendarAccess(d.hasCalendarAccess))
+      .catch(() => setHasCalendarAccess(false));
+  }, []);
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -113,8 +126,13 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
 
   const getEventsForDay = (day: number) => {
     const dStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return (data.events as Event[]).filter((e) => e.date === dStr && !e.hidden);
+    return (data.events as Event[]).filter((e) =>
+      e.date === dStr && (!e.hidden || (showHidden && e.source === 'google')),
+    );
   };
+
+  const hiddenGoogleCount = (data.events as Event[]).filter((e: Event) => e.source === 'google' && e.hidden).length;
+  const hasAnyGoogleEvents = (data.events as Event[]).some((e: Event) => e.source === 'google');
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -143,24 +161,26 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
         </Pixel>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Sync button */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <Button
-              onClick={handleSync}
-              bg={syncing ? C.navy : GOOGLE_BLUE}
-              disabled={syncing}
-              testId="btn-sync-calendar"
-            >
-              <Pixel size={18} color={C.white}>
-                {syncing ? 'SYNCING...' : '⟳ SYNC'}
-              </Pixel>
-            </Button>
-            {lastSynced && (
-              <Mono style={{ fontSize: 9, color: C.white, textAlign: 'center' }}>
-                {formatLastSynced(lastSynced)}
-              </Mono>
-            )}
-          </div>
+          {/* SYNC button — only shown when user has Google Calendar access */}
+          {hasCalendarAccess && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <Button
+                onClick={handleSync}
+                bg={syncing ? C.navy : GOOGLE_BLUE}
+                disabled={syncing}
+                testId="btn-sync-calendar"
+              >
+                <Pixel size={18} color={C.white}>
+                  {syncing ? 'SYNCING...' : '⟳ SYNC CALENDAR'}
+                </Pixel>
+              </Button>
+              {lastSynced && (
+                <Mono style={{ fontSize: 9, color: C.white, textAlign: 'center' }}>
+                  SYNCED {formatLastSynced(lastSynced)}
+                </Mono>
+              )}
+            </div>
+          )}
 
           {/* Add event dialog */}
           <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -213,20 +233,22 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
                     </select>
                   </div>
 
-                  {/* Push to Google checkbox */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={newEvent.pushToGoogle}
-                      onChange={e => setNewEvent({ ...newEvent, pushToGoogle: e.target.checked })}
-                      data-testid="checkbox-push-to-google"
-                      style={{ width: 16, height: 16, cursor: 'pointer' }}
-                    />
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <GoogleBadge />
-                      <Mono style={{ fontSize: 13, color: C.navy }}>ALSO ADD TO GOOGLE CALENDAR</Mono>
-                    </span>
-                  </label>
+                  {/* Push to Google checkbox — only shown when user has calendar access */}
+                  {hasCalendarAccess && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={newEvent.pushToGoogle}
+                        onChange={e => setNewEvent({ ...newEvent, pushToGoogle: e.target.checked })}
+                        data-testid="checkbox-push-to-google"
+                        style={{ width: 16, height: 16, cursor: 'pointer' }}
+                      />
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <GoogleBadge />
+                        <Mono style={{ fontSize: 13, color: C.navy }}>ALSO ADD TO GOOGLE CALENDAR</Mono>
+                      </span>
+                    </label>
+                  )}
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
                     <Dialog.Close asChild>
@@ -299,7 +321,11 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
                 {dayEvents.map((e: Event) => (
                   <div
                     key={e.id}
-                    style={{ background: e.color, padding: '2px 4px', border: `1px solid ${C.navy}`, display: 'flex', alignItems: 'center', gap: 2 }}
+                    style={{
+                      background: e.color, padding: '2px 4px', border: `1px solid ${C.navy}`,
+                      display: 'flex', alignItems: 'center', gap: 2,
+                      opacity: e.hidden ? 0.5 : 1,
+                    }}
                     data-testid={`event-${e.id}`}
                   >
                     {e.source === 'google' && <GoogleBadge />}
@@ -309,10 +335,10 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
                     {e.source === 'google' && (
                       <button
                         onClick={() => toggleHideGoogle(e.id)}
-                        title="Hide this event"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.white, fontSize: 8, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                        title={e.hidden ? 'Show event' : 'Hide event'}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.white, fontSize: 9, padding: 0, lineHeight: 1, flexShrink: 0 }}
                         data-testid={`btn-hide-event-${e.id}`}
-                      >✕</button>
+                      >{e.hidden ? '👁' : '✕'}</button>
                     )}
                   </div>
                 ))}
@@ -322,11 +348,24 @@ export function CalendarTab({ data, updateData }: { data: any; updateData: any }
         })}
       </div>
 
-      {/* Legend */}
-      {(data.events as Event[]).some((e: Event) => e.source === 'google') && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px' }}>
-          <GoogleBadge />
-          <Mono style={{ fontSize: 11, color: C.navy }}>= IMPORTED FROM GOOGLE CALENDAR (click ✕ to hide)</Mono>
+      {/* Footer: legend + hidden events toggle */}
+      {hasAnyGoogleEvents && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <GoogleBadge />
+            <Mono style={{ fontSize: 11, color: C.navy }}>= IMPORTED FROM GOOGLE CALENDAR</Mono>
+          </div>
+          {hiddenGoogleCount > 0 && (
+            <button
+              onClick={() => setShowHidden(p => !p)}
+              data-testid="btn-toggle-show-hidden"
+              style={{ background: 'none', border: `2px solid ${C.navy}`, cursor: 'pointer', padding: '2px 8px' }}
+            >
+              <Mono style={{ fontSize: 11, color: C.navy }}>
+                {showHidden ? `HIDE ${hiddenGoogleCount} HIDDEN` : `SHOW ${hiddenGoogleCount} HIDDEN`}
+              </Mono>
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -107,6 +107,20 @@ function googleEventToLocal(ev: {
   };
 }
 
+router.get("/calendar/status", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.json({ hasCalendarAccess: false });
+    return;
+  }
+  const sid = getSessionId(req);
+  if (!sid) {
+    res.json({ hasCalendarAccess: false });
+    return;
+  }
+  const session = await getSession(sid);
+  res.json({ hasCalendarAccess: !!session?.access_token });
+});
+
 router.get("/calendar/sync", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Not authenticated." });
@@ -190,8 +204,12 @@ router.post("/calendar/push", async (req: Request, res: Response) => {
       start = { dateTime: startISO, timeZone: "UTC" };
       end = { dateTime: endDate.toISOString().replace(".000Z", ""), timeZone: "UTC" };
     } else {
+      // For all-day events, end.date must be the day after (exclusive) per Google Calendar API spec
+      const endDate = new Date(date as string);
+      endDate.setDate(endDate.getDate() + 1);
+      const endDateStr = endDate.toISOString().split("T")[0];
       start = { date };
-      end = { date };
+      end = { date: endDateStr };
     }
 
     const created = await calendar.events.insert({
