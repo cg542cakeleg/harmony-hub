@@ -6,6 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MobileTokenExchangeSuccess {
-  token: string;
-}
+export type BeginGoogleLoginParams = {
+  returnTo?: string;
+};
