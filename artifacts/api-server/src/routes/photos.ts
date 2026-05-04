@@ -78,35 +78,57 @@ router.get("/photos/albums", async (req: Request, res: Response) => {
   }
 
   try {
-    const response = await fetch(`${PHOTOS_BASE}/albums?pageSize=20`, {
-      headers: { Authorization: `Bearer ${authed.accessToken}` },
-    });
-    const text = await response.text();
+    const headers = { Authorization: `Bearer ${authed.accessToken}` };
 
-    if (!response.ok) {
-      const classified = classifyPhotosError(response.status, text);
+    // Fetch owned albums and shared albums in parallel
+    const [ownedRes, sharedRes] = await Promise.all([
+      fetch(`${PHOTOS_BASE}/albums?pageSize=20`, { headers }),
+      fetch(`${PHOTOS_BASE}/sharedAlbums?pageSize=20`, { headers }),
+    ]);
+
+    // If the primary albums call fails, propagate the error
+    if (!ownedRes.ok) {
+      const text = await ownedRes.text();
+      const classified = classifyPhotosError(ownedRes.status, text);
       res.status(classified.httpStatus).json({ error: classified.code, message: classified.message });
       return;
     }
 
-    const body = JSON.parse(text) as {
-      albums?: {
-        id: string;
-        title?: string;
-        coverPhotoBaseUrl?: string;
-        coverPhotoMediaItemId?: string;
-        mediaItemsCount?: string;
-        productUrl?: string;
-      }[];
+    type RawAlbum = {
+      id: string;
+      title?: string;
+      coverPhotoBaseUrl?: string;
+      mediaItemsCount?: string;
+      productUrl?: string;
     };
 
-    const albums = (body.albums ?? []).map(a => ({
+    const ownedBody = JSON.parse(await ownedRes.text()) as { albums?: RawAlbum[] };
+    // sharedAlbums uses the same shape; ignore errors (scope may not be granted for shared)
+    let sharedAlbums: RawAlbum[] = [];
+    if (sharedRes.ok) {
+      const sharedBody = JSON.parse(await sharedRes.text()) as { sharedAlbums?: RawAlbum[] };
+      sharedAlbums = sharedBody.sharedAlbums ?? [];
+    }
+
+    const toAlbum = (a: RawAlbum, shared: boolean) => ({
       id: a.id,
-      title: a.title ?? "Untitled Album",
+      title: `${shared ? "📤 " : ""}${a.title ?? "Untitled Album"}`,
       coverPhotoBaseUrl: a.coverPhotoBaseUrl ?? null,
       mediaItemsCount: parseInt(a.mediaItemsCount ?? "0", 10),
       productUrl: a.productUrl ?? null,
-    }));
+      shared,
+    });
+
+    // Merge: shared albums first, then owned; deduplicate by id
+    const seen = new Set<string>();
+    const albums = [
+      ...sharedAlbums.map(a => toAlbum(a, true)),
+      ...(ownedBody.albums ?? []).map(a => toAlbum(a, false)),
+    ].filter(a => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
 
     res.json({ albums });
   } catch (err: unknown) {
@@ -128,7 +150,8 @@ router.get("/photos/albums/:albumId", async (req: Request, res: Response) => {
   }
 
   const { albumId } = req.params;
-  const pageSize = Math.min(parseInt((req.query.pageSize as string) ?? "50", 10), 100);
+  const rawPageSize = parseInt((req.query.pageSize as string) ?? "50", 10);
+  const pageSize = Math.min(isNaN(rawPageSize) || rawPageSize < 1 ? 50 : rawPageSize, 100);
 
   try {
     const response = await fetch(`${PHOTOS_BASE}/mediaItems:search`, {
