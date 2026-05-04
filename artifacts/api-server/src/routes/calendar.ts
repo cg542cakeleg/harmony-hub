@@ -88,10 +88,16 @@ function googleEventToLocal(ev: {
   let time = "";
 
   if (startRaw) {
-    const d = new Date(startRaw);
-    date = d.toISOString().split("T")[0];
-    if (!allDay) {
-      time = d.toTimeString().slice(0, 5);
+    if (allDay) {
+      // All-day: startRaw is "YYYY-MM-DD" — use directly, no timezone conversion
+      date = startRaw.slice(0, 10);
+    } else {
+      // Timed: startRaw is an ISO-8601 string with offset (e.g. "2026-05-10T14:30:00-07:00")
+      // Extract date and time from the string itself to preserve the event's local wall time,
+      // rather than converting to UTC which would shift the displayed time for non-UTC users.
+      const localPart = startRaw.slice(0, 16); // "YYYY-MM-DDTHH:MM"
+      date = localPart.slice(0, 10);
+      time = localPart.slice(11, 16);
     }
   }
 
@@ -198,11 +204,17 @@ router.post("/calendar/push", async (req: Request, res: Response) => {
     let end: { dateTime?: string; date?: string; timeZone?: string };
 
     if (time) {
+      // Use floating datetime (no timeZone) so Google Calendar respects the user's
+      // calendar timezone setting rather than forcing UTC interpretation.
       const startISO = `${date}T${time}:00`;
-      const startDate = new Date(startISO);
-      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-      start = { dateTime: startISO, timeZone: "UTC" };
-      end = { dateTime: endDate.toISOString().replace(".000Z", ""), timeZone: "UTC" };
+      const endHour = parseInt(time.slice(0, 2), 10);
+      const endMin = parseInt(time.slice(3, 5), 10);
+      const totalMin = endHour * 60 + endMin + 60;
+      const endHourStr = String(Math.floor(totalMin / 60) % 24).padStart(2, "0");
+      const endMinStr = String(totalMin % 60).padStart(2, "0");
+      const endISO = `${date}T${endHourStr}:${endMinStr}:00`;
+      start = { dateTime: startISO };
+      end = { dateTime: endISO };
     } else {
       // For all-day events, end.date must be the day after (exclusive) per Google Calendar API spec
       const endDate = new Date(date as string);
