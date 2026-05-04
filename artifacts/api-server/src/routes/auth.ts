@@ -1,4 +1,4 @@
-import * as oidc from "openid-client";
+﻿import * as oidc from "openid-client";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -218,7 +218,7 @@ router.post("/auth/change-password", async (req: Request, res: Response) => {
     .set({ passwordHash: newHash, updatedAt: new Date() })
     .where(eq(usersTable.id, user.id));
 
-  // Invalidate ALL sessions including current — user must re-authenticate
+  // Invalidate ALL sessions including current â€” user must re-authenticate
   await invalidateAllUserSessions(user.id);
   res.clearCookie(SESSION_COOKIE, { path: "/" });
 
@@ -244,7 +244,7 @@ router.post("/auth/forgot-password", authRateLimit, async (req: Request, res: Re
       .set({ passwordResetToken: token, passwordResetExpiry: expiry, updatedAt: new Date() })
       .where(eq(usersTable.id, user.id));
 
-    // TODO: send email with link /harmony-hub/?reset_token=<token>
+    // TODO: send email with link /?reset_token=<token>
     if (process.env.NODE_ENV !== "production") {
       console.log(`[DEV] Password reset token for ${emailLower}: ${token}`);
     }
@@ -344,7 +344,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
   res.clearCookie("g_return_to", { path: "/" });
 
   if (!codeVerifier || !expectedState) {
-    res.redirect("/harmony-hub/?auth_error=invalid_state");
+    res.redirect("/?auth_error=invalid_state");
     return;
   }
 
@@ -364,7 +364,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
 
     const claims = tokens.claims();
     if (!claims) {
-      res.redirect("/harmony-hub/?auth_error=no_claims");
+      res.redirect("/?auth_error=no_claims");
       return;
     }
 
@@ -389,7 +389,7 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
     setSessionCookie(res, sid);
     res.redirect(returnTo);
   } catch {
-    res.redirect("/harmony-hub/?auth_error=oauth_failed");
+    res.redirect("/?auth_error=oauth_failed");
   }
 });
 
@@ -401,7 +401,8 @@ router.post("/auth/logout", async (req: Request, res: Response) => {
 });
 
 router.get("/login", (_req: Request, res: Response) => {
-  res.redirect("/harmony-hub/");
+  res.redirect("/");
 });
 
 export default router;
+
