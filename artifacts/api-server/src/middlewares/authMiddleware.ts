@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
-import { clearSession, getSessionId, getSession } from "../lib/auth";
+import { clearSession, getSessionId, getSession, setSessionCookie } from "../lib/auth";
 
 declare global {
   namespace Express {
@@ -40,5 +40,9 @@ export async function authMiddleware(
   }
 
   req.user = session.user;
+
+  // Refresh cookie on every authenticated request (true sliding session)
+  setSessionCookie(res, sid);
+
   next();
 }
