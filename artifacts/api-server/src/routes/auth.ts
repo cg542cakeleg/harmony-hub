@@ -312,6 +312,15 @@ router.get("/auth/google", authRateLimit, async (req: Request, res: Response) =>
     return;
   }
 
+  // If APP_URL is set and the request came in on a different domain, redirect
+  // to the canonical domain before starting OAuth so all cookies are scoped
+  // to the same origin that Google will redirect back to.
+  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+  if (appUrl && getOrigin(req) !== appUrl) {
+    const returnTo = getSafeReturnTo(req.query.returnTo as string | undefined);
+    return void res.redirect(`${appUrl}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
   try {
     const config = await getGoogleOidcConfig();
     const callbackUrl = `${getOrigin(req)}/api/auth/google/callback`;
