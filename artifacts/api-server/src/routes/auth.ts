@@ -449,8 +449,10 @@ router.get("/auth/google/callback", async (req: Request, res: Response) => {
     const sid = await createSession(sessionData);
     setSessionCookie(res, sid);
     res.redirect(returnTo);
-  } catch {
-    res.redirect("/?auth_error=oauth_failed");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[oauth/callback] authorizationCodeGrant failed:", msg, err);
+    res.redirect("/?auth_error=oauth_failed&reason=" + encodeURIComponent(msg.slice(0, 100)));
   }
 });
 
